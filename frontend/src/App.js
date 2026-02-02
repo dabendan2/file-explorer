@@ -122,8 +122,8 @@ const App = () => {
   return (
     <div className="min-h-screen bg-[#FFF9F5] text-gray-800 font-sans selection:bg-pink-100 antialiased">
       {/* 頂部路徑列 (Path Bar Component) - Google Style + 溫馨圓潤 */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-orange-100 px-2 py-1.5 shadow-sm">
-        <div className="flex items-center overflow-x-auto no-scrollbar scroll-smooth">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-orange-100 px-2 py-1.5 shadow-sm flex items-center justify-between">
+        <div className="flex items-center overflow-x-auto no-scrollbar scroll-smooth flex-1 mr-2">
           <button 
             onClick={() => fetchFiles('')}
             className="text-blue-500 font-bold text-base whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
@@ -141,6 +141,9 @@ const App = () => {
               </button>
             </React.Fragment>
           ))}
+        </div>
+        <div className="text-base text-gray-400 font-mono shrink-0 px-2 border-l border-orange-50">
+          {gitSha}
         </div>
       </header>
 
@@ -210,9 +213,6 @@ const App = () => {
       </main>
 
       {/* Aesthetic Decoration */}
-      <div className="fixed bottom-2 left-2 text-base text-gray-300 font-mono opacity-50 z-50">
-        SHA: {gitSha}
-      </div>
       <div className="fixed -bottom-6 -left-6 w-32 h-32 bg-orange-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       <div className="fixed -top-6 -right-6 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
     </div>
