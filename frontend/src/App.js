@@ -66,28 +66,38 @@ const App = () => {
   return (
     <div className="min-h-screen bg-white text-[#202124] font-sans antialiased">
       {/* Google Style Header */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-2 h-16 flex items-center justify-between shadow-sm">
-        <div className="flex items-center overflow-x-auto no-scrollbar flex-1 mr-2">
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+        {/* 第一行：標題 */}
+        <div className="flex items-center justify-between px-2 h-10">
           <button 
             onClick={() => fetchFiles('')}
-            className="flex items-center text-[#1a73e8] hover:bg-blue-50 px-2 py-1 rounded-md transition-colors whitespace-nowrap"
+            className="text-[#1a73e8] hover:bg-blue-50 px-2 py-0.5 rounded-lg transition-all active:scale-95 whitespace-nowrap"
           >
-            <span className="text-2xl font-semibold mr-1">Drive</span>
+            <span className="text-3xl font-black tracking-tight">Explorer</span>
           </button>
-          {pathSegments.map((segment, i) => (
-            <React.Fragment key={i}>
-              <ChevronRight size={20} className="text-gray-400 shrink-0 mx-1" />
-              <button
-                onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
-                className="text-gray-600 hover:bg-gray-100 px-2 py-1 rounded-md transition-colors text-lg font-medium whitespace-nowrap"
-              >
-                {segment}
-              </button>
-            </React.Fragment>
-          ))}
         </div>
-        <div className="text-lg text-gray-400 font-mono shrink-0 px-2 border-l border-gray-100">
-          {gitSha}
+        
+        {/* 第二行：Path Bar */}
+        <div className="flex items-center px-2 h-8 bg-gray-50/50 overflow-x-auto no-scrollbar scroll-smooth border-t border-gray-50">
+          <div className="flex items-center min-w-max">
+            <button 
+              onClick={() => fetchFiles('')}
+              className="text-gray-500 hover:text-[#1a73e8] text-lg font-medium px-1.5 py-0.5 rounded-md transition-colors"
+            >
+              Home
+            </button>
+            {pathSegments.map((segment, i) => (
+              <React.Fragment key={i}>
+                <ChevronRight size={18} className="text-gray-300 shrink-0 mx-0.5" />
+                <button
+                  onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
+                  className="text-gray-600 hover:text-[#1a73e8] text-lg font-bold px-1.5 py-0.5 rounded-md transition-colors whitespace-nowrap"
+                >
+                  {segment}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </header>
 
