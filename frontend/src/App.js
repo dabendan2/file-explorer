@@ -210,6 +210,9 @@ const App = () => {
       </main>
 
       {/* Aesthetic Decoration */}
+      <div className="fixed bottom-2 left-2 text-[10px] text-gray-300 font-mono opacity-50 z-50">
+        SHA: {gitSha}
+      </div>
       <div className="fixed -bottom-6 -left-6 w-32 h-32 bg-orange-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       <div className="fixed -top-6 -right-6 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
     </div>
