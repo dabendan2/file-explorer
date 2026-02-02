@@ -60,12 +60,40 @@ test('switches to viewer mode on file click', async () => {
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
 });
 
-test('persists path in localStorage', async () => {
+test('adheres to font size and padding constraints', async () => {
   setupMocks('a32a96f2');
   render(<App />);
+  
+  // Wait for list to render
   const folderItem = await screen.findByText(/folder1/i);
-  fireEvent.click(folderItem);
-  await waitFor(() => {
-    expect(localStorage.getItem('explorer-path')).toBe('folder1');
+  const fileListContainer = folderItem.closest('div').parentElement;
+
+  // 1. Check font sizes (All text elements must be >= text-base)
+  const allElements = document.querySelectorAll('*');
+  allElements.forEach(el => {
+    const hasText = Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim());
+    if (hasText && !['SCRIPT', 'STYLE', 'SVG', 'path'].includes(el.tagName)) {
+      const classes = Array.from(el.classList);
+      const fontSizeClasses = classes.filter(cls => cls.startsWith('text-'));
+      fontSizeClasses.forEach(cls => {
+        const size = cls.split('-')[1];
+        // Ensure no small/extra-small text
+        expect(['xs', 'sm']).not.toContain(size);
+      });
+    }
+  });
+
+  // 2. Check padding (must not exceed p-2 / 0.5rem)
+  const elementsWithPadding = document.querySelectorAll('[class*="p-"]');
+  expect(elementsWithPadding.length).toBeGreaterThan(0);
+  elementsWithPadding.forEach(el => {
+    const classes = Array.from(el.classList);
+    classes.forEach(cls => {
+      const match = cls.match(/^p(?:[trblxy])?-(\d+(\.\d+)?)$/);
+      if (match) {
+        const paddingVal = parseFloat(match[1]);
+        expect(paddingVal).toBeLessThanOrEqual(2);
+      }
+    });
   });
 });

@@ -195,7 +195,7 @@ const App = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-base font-bold text-gray-700 truncate leading-tight">{file.name}</div>
-                    <div className="text-xs text-gray-400 font-medium flex gap-2 mt-0.5">
+                    <div className="text-base text-gray-400 font-medium flex gap-2 mt-0.5">
                       <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
                       <span>•</span>
                       <span>{file.modified}</span>
