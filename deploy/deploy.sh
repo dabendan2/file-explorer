@@ -63,3 +63,40 @@ else
     echo "錯誤：build 目錄不存在，請確認 build 是否成功。"
     exit 1
 fi
+
+# 檢查並重新啟動後端服務
+echo "正在檢查後端服務..."
+# 假設後端入口為 backend/src/index.js，使用 pm2 或直接用 node 啟動
+# 此處實作通用檢查與清理邏輯
+
+# 1. 清理殘留程序 (以檔案路徑關鍵字搜尋)
+OLD_PIDS=$(pgrep -f "backend/src/index.js")
+if [ ! -z "$OLD_PIDS" ]; then
+    echo "發現殘留後端程序 (PIDs: $OLD_PIDS)，正在清理..."
+    kill -9 $OLD_PIDS
+    sleep 2
+fi
+
+# 2. 啟動後端服務
+echo "正在啟動後端服務..."
+nohup node ../backend/src/index.js > ../backend/server.log 2>&1 &
+sleep 3
+
+# 3. 驗證服務狀態 (假設監聽 5000 埠)
+BACKEND_PORT=5000
+if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null ; then
+    echo "後端服務已成功啟動於埠號 $BACKEND_PORT。"
+    
+    # 4. 使用 Curl 檢查部署端點
+    echo "正在驗證 API 端點響應..."
+    HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/api/files || echo "000")
+    if [ "$HTTP_STATUS" -eq 200 ]; then
+        echo "API 驗證成功 (HTTP 200)。"
+    else
+        echo "錯誤：API 驗證失敗 (HTTP 狀態碼: $HTTP_STATUS)，請檢查服務邏輯。"
+        exit 1
+    fi
+else
+    echo "錯誤：後端服務啟動失敗，請檢查 backend/server.log。"
+    exit 1
+fi
