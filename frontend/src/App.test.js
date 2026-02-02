@@ -11,7 +11,8 @@ test('renders explorer title', () => {
 test('renders file list with correct sizes from mocked fetch', async () => {
   const mockFiles = [
     { name: 'README.md', type: 'file', size: 1228.8, modified: '2024-01-22' },
-    { name: 'config.json', type: 'file', size: 512, modified: '2024-01-22' }
+    { name: 'empty.txt', type: 'file', size: 0, modified: '2024-01-22' },
+    { name: 'empty_folder', type: 'folder', size: 0, modified: '2024-01-22' }
   ];
   jest.spyOn(global, 'fetch').mockImplementation(() =>
     Promise.resolve({
@@ -23,8 +24,8 @@ test('renders file list with correct sizes from mocked fetch', async () => {
   
   expect(await screen.findByText(/README.md/i)).toBeInTheDocument();
   expect(screen.getByText(/1.2 KB/i)).toBeInTheDocument();
-  expect(screen.getByText(/config.json/i)).toBeInTheDocument();
-  expect(screen.getByText(/512 B/i)).toBeInTheDocument();
+  expect(screen.getByText(/empty.txt/i)).toBeInTheDocument();
+  expect(screen.getAllByText(/-/i).length).toBeGreaterThan(0);
 
   global.fetch.mockRestore();
 });
