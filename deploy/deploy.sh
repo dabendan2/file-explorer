@@ -80,6 +80,7 @@ fi
 # 2. 啟動後端服務
 echo "正在啟動後端服務..."
 mkdir -p backend
+cd backend && npm install --silent && cd ..
 nohup node backend/src/index.js > backend/server.log 2>&1 &
 sleep 3
 
