@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { Folder, File, ChevronRight, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 
 const App = () => {
-  // Use environment variable for version matching
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
   const [files, setFiles] = useState([]);
-  const [currentPath, setCurrentPath] = useState(() => {
-    return localStorage.getItem('explorer-path') || '';
-  });
+  const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('explorer-path') || '');
   const [loading, setLoading] = useState(true);
   const [fileContent, setFileContent] = useState(null);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'viewer'
+  const [viewMode, setViewMode] = useState('list');
   const [selectedFile, setSelectedFile] = useState(null);
 
   const formatSize = (bytes) => {
-    if (bytes === 0 || bytes === '-') return '-';
+    if (!bytes || bytes === '-') return '';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -24,184 +21,122 @@ const App = () => {
   const fetchFiles = (path = '') => {
     setLoading(true);
     setViewMode('list');
-    setFileContent(null);
-    setSelectedFile(null);
-    
     const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
     fetch(url)
-      .then(res => {
-        if (!res.ok) throw new Error('API request failed');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        if (data.error) {
-          console.error('API Error:', data.error);
-          setLoading(false);
-          return;
-        }
         setFiles(data);
         setCurrentPath(path);
         localStorage.setItem('explorer-path', path);
         setLoading(false);
       })
-      .catch(err => {
-        console.error('Failed to fetch files:', err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   };
 
   const fetchFileContent = (file) => {
-    setLoading(true);
     const path = currentPath ? `${currentPath}/${file.name}` : file.name;
-    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
-    
-    if (isImage) {
+    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+    setSelectedFile(file);
+    if (isImg) {
       setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
-      setSelectedFile(file);
       setViewMode('viewer');
-      setLoading(false);
     } else {
       fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
-        .then(res => {
-          if (!res.ok) throw new Error('API content request failed');
-          return res.text();
-        })
+        .then(res => res.text())
         .then(text => {
           setFileContent(text);
-          setSelectedFile(file);
           setViewMode('viewer');
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error('Failed to fetch content:', err);
-          setLoading(false);
         });
     }
   };
 
   useEffect(() => {
-    // 1. Version Check - Verify injected Git SHA matches Backend
     fetch('/explorer/api/version')
-      .then(res => {
-        if (!res.ok) throw new Error('Version check failed');
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        const backendSha = data.gitSha;
-        if (backendSha !== gitSha && gitSha !== 'unknown') {
-          // Rule: Mismatch must directly throw
-          throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${backendSha})`);
+        if (data.gitSha !== gitSha && gitSha !== 'unknown') {
+          throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${data.gitSha})`);
         }
-        // If matches, fetch data
         fetchFiles(currentPath);
-      })
-      .catch(err => {
-        if (err.message.includes('Git SHA mismatch')) {
-          throw err;
-        }
-        console.error('Initialization error:', err);
-        setLoading(false);
       });
   }, []);
 
-  const navigateTo = (index) => {
-    const segments = currentPath.split('/');
-    const newPath = segments.slice(0, index + 1).join('/');
-    fetchFiles(newPath);
-  };
-
   const pathSegments = currentPath ? currentPath.split('/') : [];
 
-  const getIconColor = (index) => {
-    const colors = ['text-blue-400', 'text-red-400', 'text-yellow-400', 'text-green-400'];
-    return colors[index % colors.length];
-  };
-
-  const isImageFile = selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name);
-
   return (
-    <div className="min-h-screen bg-[#FFF9F5] text-gray-800 font-sans selection:bg-pink-100 antialiased">
-      {/* 頂部路徑列 (Path Bar Component) - Google Style + 溫馨圓潤 */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-orange-100 px-2 py-1.5 shadow-sm flex items-center justify-between">
-        <div className="flex items-center overflow-x-auto no-scrollbar scroll-smooth flex-1 mr-2">
+    <div className="min-h-screen bg-white text-[#202124] font-sans antialiased">
+      {/* Google Style Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-2 h-16 flex items-center justify-between shadow-sm">
+        <div className="flex items-center overflow-x-auto no-scrollbar flex-1 mr-2">
           <button 
             onClick={() => fetchFiles('')}
-            className="text-blue-500 font-black text-3xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
+            className="flex items-center text-[#1a73e8] hover:bg-blue-50 px-2 py-1 rounded-md transition-colors whitespace-nowrap"
           >
-            🏠 Explorer
+            <span className="text-2xl font-semibold mr-1">Drive</span>
           </button>
           {pathSegments.map((segment, i) => (
             <React.Fragment key={i}>
-              <ChevronRight size={24} className="text-orange-200 shrink-0 mx-0.5" />
+              <ChevronRight size={20} className="text-gray-400 shrink-0 mx-1" />
               <button
-                onClick={() => navigateTo(i)}
-                className="text-blue-500 font-bold text-2xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
+                onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
+                className="text-gray-600 hover:bg-gray-100 px-2 py-1 rounded-md transition-colors text-lg font-medium whitespace-nowrap"
               >
                 {segment}
               </button>
             </React.Fragment>
           ))}
         </div>
-        <div className="text-base text-gray-400 font-mono shrink-0 px-2 border-l border-orange-50">
+        <div className="text-base text-gray-400 font-mono shrink-0 px-2 select-none border-l border-gray-100">
           {gitSha}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="p-2 max-w-2xl mx-auto">
+      <main className="max-w-screen-xl mx-auto p-0">
         {viewMode === 'viewer' ? (
-          /* 內容檢視器 (File Viewer) - 溫馨舒適切換 */
-          <div className="bg-white rounded-[1.5rem] p-2 border border-orange-50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex justify-between items-center mb-2 px-1">
-              <h3 className="font-bold text-gray-700 truncate mr-2 text-base">📄 {selectedFile?.name}</h3>
-              <button 
-                onClick={() => setViewMode('list')}
-                className="bg-orange-100 text-orange-600 text-base font-bold px-3 py-1 rounded-full active:scale-90 transition-transform"
-              >
-                返回
+          <div className="animate-in fade-in duration-200">
+            <div className="flex items-center px-2 py-2 border-b border-gray-100 bg-gray-50">
+              <button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-200 rounded-full transition-colors mr-2">
+                <ArrowLeft size={24} className="text-gray-600" />
               </button>
+              <h2 className="text-lg font-medium truncate">{selectedFile?.name}</h2>
             </div>
-            <div className="rounded-xl bg-orange-50/30">
-              {isImageFile ? (
-                <div className="overflow-auto max-h-[calc(100vh-140px)]">
-                  <img src={fileContent} alt={selectedFile.name} className="max-w-full h-auto rounded-lg mx-auto shadow-inner" />
-                </div>
+            <div className="p-2 bg-white">
+              {selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name) ? (
+                <img src={fileContent} alt="" className="max-w-full h-auto mx-auto shadow-md rounded-sm" />
               ) : (
-                <pre className="text-base font-mono text-gray-700 whitespace-pre-wrap leading-relaxed p-2">
+                <pre className="text-base font-mono bg-gray-50 p-2 rounded-lg overflow-x-auto leading-relaxed border border-gray-200">
                   {fileContent}
                 </pre>
               )}
             </div>
           </div>
         ) : (
-          /* 下方列表 (File List Component) - 極簡可愛溫馨 */
-          <div className="space-y-0">
+          <div className="divide-y divide-gray-100">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-400 rounded-full animate-spin"></div>
-                <p className="text-orange-300 font-medium text-base">正在準備您的檔案...</p>
+              <div className="flex justify-center py-20">
+                <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
               </div>
             ) : (
               files.map((file, i) => (
                 <div 
                   key={i} 
-                  className="group flex items-center p-1.5 bg-white/40 hover:bg-white active:bg-orange-50 rounded-[1rem] transition-all cursor-pointer border border-transparent hover:border-orange-50 active:shadow-inner"
                   onClick={() => file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file)}
+                  className="flex items-center px-2 py-2 hover:bg-gray-50 active:bg-blue-50 transition-colors cursor-pointer group"
                 >
-                  <div className={`w-11 h-11 rounded-2xl mr-3 flex items-center justify-center shrink-0 ${file.type === 'folder' ? 'bg-orange-50' : 'bg-blue-50'}`}>
-                    {file.type === 'folder' ? 
-                      <Folder size={22} className={getIconColor(i)} /> : 
-                      (/\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
-                        <ImageIcon size={22} className="text-blue-400" /> : 
-                        <File size={22} className="text-gray-400" />
-                      )
-                    }
+                  <div className="w-10 h-10 flex items-center justify-center mr-4">
+                    {file.type === 'folder' ? (
+                      <Folder size={24} className="text-gray-500 fill-gray-500" />
+                    ) : (
+                      /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
+                        <ImageIcon size={24} className="text-blue-500" /> : 
+                        <File size={24} className="text-gray-400" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-bold text-gray-700 truncate leading-tight">{file.name}</div>
+                    <span className="text-base text-gray-900 font-normal truncate block">{file.name}</span>
                   </div>
                   {file.type === 'file' && (
-                    <div className="text-base text-gray-400 font-medium shrink-0 ml-2">
+                    <div className="text-base text-gray-500 font-normal ml-4 shrink-0">
                       {formatSize(file.size)}
                     </div>
                   )}
@@ -211,10 +146,6 @@ const App = () => {
           </div>
         )}
       </main>
-
-      {/* Aesthetic Decoration */}
-      <div className="fixed -bottom-6 -left-6 w-32 h-32 bg-orange-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
-      <div className="fixed -top-6 -right-6 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
     </div>
   );
 };
