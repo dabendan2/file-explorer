@@ -126,16 +126,16 @@ const App = () => {
         <div className="flex items-center overflow-x-auto no-scrollbar scroll-smooth flex-1 mr-2">
           <button 
             onClick={() => fetchFiles('')}
-            className="text-blue-500 font-black text-xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
+            className="text-blue-500 font-black text-3xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
           >
             🏠 Explorer
           </button>
           {pathSegments.map((segment, i) => (
             <React.Fragment key={i}>
-              <ChevronRight size={18} className="text-orange-200 shrink-0 mx-0.5" />
+              <ChevronRight size={24} className="text-orange-200 shrink-0 mx-0.5" />
               <button
                 onClick={() => navigateTo(i)}
-                className="text-blue-500 font-bold text-xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
+                className="text-blue-500 font-bold text-2xl whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
               >
                 {segment}
               </button>
