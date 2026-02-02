@@ -20,6 +20,14 @@ app.get('/api/files', (req, res) => {
   res.json(files);
 });
 
+// API: 獲取系統版本資訊
+app.get('/api/version', (req, res) => {
+  res.json({
+    version: process.env.REACT_APP_VERSION || '1.0.0',
+    gitSha: process.env.REACT_APP_GIT_SHA || 'unknown'
+  });
+});
+
 // 啟動監聽埠號
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

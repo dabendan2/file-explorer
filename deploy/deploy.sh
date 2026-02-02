@@ -19,7 +19,7 @@ sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 echo "正在啟動後端服務..."
 pgrep -f "backend/src/index.js" | xargs -r kill -9
 (cd backend && npm install --silent)
-nohup node backend/src/index.js > backend/server.log 2>&1 &
+nohup env PORT="$PORT" REACT_APP_VERSION="$REACT_APP_VERSION" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" node backend/src/index.js > backend/server.log 2>&1 &
 sleep 3
 
 # 5. 執行部署後端點與狀態驗證
