@@ -7,7 +7,7 @@ const app = express();
 const MOCK_ROOT = process.env.MOCK_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
 
 // API: 讀取沙箱目錄內容並返回檔案列表
-app.get('/api/files', (req, res) => {
+app.get('/files', (req, res) => {
   const files = fs.readdirSync(MOCK_ROOT).map(name => {
     const stats = fs.statSync(path.join(MOCK_ROOT, name));
     return {
