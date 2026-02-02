@@ -75,10 +75,18 @@ test('adheres to font size and padding constraints', async () => {
     if (hasText && !['SCRIPT', 'STYLE', 'SVG', 'path'].includes(el.tagName)) {
       const classes = Array.from(el.classList);
       const fontSizeClasses = classes.filter(cls => cls.startsWith('text-'));
+      
       fontSizeClasses.forEach(cls => {
         const size = cls.split('-')[1];
-        // Ensure no small/extra-small text
+        // 1. 攔截預設的小字體類別
         expect(['xs', 'sm']).not.toContain(size);
+        
+        // 2. 攔截自定義的小字體數值 (e.g., text-[10px])
+        const pixelMatch = size.match(/\[(\d+)px\]/);
+        if (pixelMatch) {
+          const pxValue = parseInt(pixelMatch[1]);
+          expect(pxValue).toBeGreaterThanOrEqual(16);
+        }
       });
     }
   });
