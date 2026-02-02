@@ -8,8 +8,10 @@ test('renders explorer title', () => {
   expect(linkElement).toBeInTheDocument();
 });
 
-test('renders file list', () => {
+test('renders file list with correct sizes', () => {
   render(<App />);
-  const fileElement = screen.getByText(/README.md/i);
-  expect(fileElement).toBeInTheDocument();
+  expect(screen.getByText(/README.md/i)).toBeInTheDocument();
+  expect(screen.getByText(/1.2 KB/i)).toBeInTheDocument();
+  expect(screen.getByText(/config.json/i)).toBeInTheDocument();
+  expect(screen.getByText(/512 B/i)).toBeInTheDocument();
 });

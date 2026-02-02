@@ -38,8 +38,12 @@ async function runSandboxTest() {
         // 3. 驗證屬性正確性 (例如 test.txt 應該是 file)
         const txtFile = files.find(f => f.name === 'test.txt');
         if (txtFile.type !== 'file') throw new Error("test.txt should be a file");
+        if (txtFile.size !== 12288) throw new Error(`test.txt size mismatch: expected 12288, got ${txtFile.size}`);
 
-        console.log("✅ Sandbox Test Passed: All checks passed (presence, structure, types).");
+        const pngFile = files.find(f => f.name === 'test.png');
+        if (pngFile.size !== 70) throw new Error(`test.png size mismatch: expected 70, got ${pngFile.size}`);
+
+        console.log("✅ Sandbox Test Passed: All checks passed (presence, structure, types, size).");
         process.exit(0);
       } catch (err) {
         console.error(`❌ Sandbox Test Failed: ${err.message}`);
