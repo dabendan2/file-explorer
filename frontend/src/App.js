@@ -121,22 +121,22 @@ const App = () => {
                 <div 
                   key={i} 
                   onClick={() => file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file)}
-                  className="flex items-center px-2 py-2 hover:bg-gray-50 active:bg-blue-50 transition-colors cursor-pointer group"
+                  className="flex items-center px-2 py-0.5 hover:bg-gray-50 active:bg-blue-50 transition-colors cursor-pointer group"
                 >
-                  <div className="w-10 h-10 flex items-center justify-center mr-4">
+                  <div className="w-8 h-8 flex items-center justify-center mr-3">
                     {file.type === 'folder' ? (
-                      <Folder size={24} className="text-gray-500 fill-gray-500" />
+                      <Folder size={20} className="text-gray-500 fill-gray-500" />
                     ) : (
                       /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
-                        <ImageIcon size={24} className="text-blue-500" /> : 
-                        <File size={24} className="text-gray-400" />
+                        <ImageIcon size={20} className="text-blue-500" /> : 
+                        <File size={20} className="text-gray-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-lg text-gray-900 font-normal truncate block">{file.name}</span>
+                    <span className="text-lg text-gray-900 font-normal truncate block leading-none">{file.name}</span>
                   </div>
                   {file.type === 'file' && (
-                    <div className="text-lg text-gray-500 font-normal ml-4 shrink-0">
+                    <div className="text-lg text-gray-500 font-normal ml-4 shrink-0 leading-none">
                       {formatSize(file.size)}
                     </div>
                   )}
