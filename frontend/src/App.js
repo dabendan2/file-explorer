@@ -172,7 +172,7 @@ const App = () => {
           </div>
         ) : (
           /* 下方列表 (File List Component) - 極簡可愛溫馨 */
-          <div className="space-y-1.5">
+          <div className="space-y-0">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-400 rounded-full animate-spin"></div>
