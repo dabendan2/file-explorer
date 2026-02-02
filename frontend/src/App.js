@@ -158,9 +158,11 @@ const App = () => {
                 返回
               </button>
             </div>
-            <div className="overflow-auto max-h-[calc(100vh-140px)] rounded-xl bg-orange-50/30">
+            <div className="rounded-xl bg-orange-50/30">
               {isImageFile ? (
-                <img src={fileContent} alt={selectedFile.name} className="max-w-full h-auto rounded-lg mx-auto shadow-inner" />
+                <div className="overflow-auto max-h-[calc(100vh-140px)]">
+                  <img src={fileContent} alt={selectedFile.name} className="max-w-full h-auto rounded-lg mx-auto shadow-inner" />
+                </div>
               ) : (
                 <pre className="text-base font-mono text-gray-700 whitespace-pre-wrap leading-relaxed p-2">
                   {fileContent}
@@ -194,12 +196,12 @@ const App = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-base font-bold text-gray-700 truncate leading-tight">{file.name}</div>
-                    <div className="text-base text-gray-400 font-medium flex gap-2 mt-0.5">
-                      <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
-                      <span>•</span>
-                      <span>{file.modified}</span>
-                    </div>
                   </div>
+                  {file.type === 'file' && (
+                    <div className="text-base text-gray-400 font-medium shrink-0 ml-2">
+                      {formatSize(file.size)}
+                    </div>
+                  )}
                 </div>
               ))
             )}
