@@ -1,6 +1,7 @@
 {
   "name": "explorer",
   "version": "0.1.0",
+  "homepage": "/explorer",
   "private": true,
   "dependencies": {
     "@testing-library/jest-dom": "^6.9.1",
