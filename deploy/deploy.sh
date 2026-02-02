@@ -96,6 +96,16 @@ if lsof -Pi :$BACKEND_PORT -sTCP:LISTEN -t >/dev/null ; then
         echo "錯誤：API 驗證失敗 (HTTP 狀態碼: $HTTP_STATUS)，請檢查服務邏輯。"
         exit 1
     fi
+
+    # 5. 驗證前端入口
+    echo "正在驗證前端入口 (${FRONTEND_URL})..."
+    FE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" || echo "000")
+    if [ "$FE_STATUS" -eq 200 ]; then
+        echo "前端入口驗證成功 (HTTP 200)。"
+    else
+        echo "警告：前端入口驗證失敗 (HTTP 狀態碼: $FE_STATUS)，請確認 Nginx/Web Server 配置。"
+        # 前端通常依賴外部 Web Server，此處可視需求決定是否 exit 1
+    fi
 else
     echo "錯誤：後端服務啟動失敗，請檢查 backend/server.log。"
     exit 1
