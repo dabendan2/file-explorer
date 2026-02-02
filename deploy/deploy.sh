@@ -53,11 +53,11 @@ echo "檢查通過，無硬編碼數值。"
 mkdir -p "$TARGET_DIR"
 
 # 執行 React Build
-npm run build
+cd frontend && npm run build && cd ..
 
 # 同步文件
-if [ -d "$SOURCE_DIR" ]; then
-    rsync -av --delete "$SOURCE_DIR" "$TARGET_DIR"
+if [ -d "frontend/$SOURCE_DIR" ]; then
+    rsync -av --delete "frontend/$SOURCE_DIR" "$TARGET_DIR"
     echo "部署完成。目標：$TARGET_DIR"
 else
     echo "錯誤：build 目錄不存在，請確認 build 是否成功。"
