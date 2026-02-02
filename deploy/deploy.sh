@@ -39,8 +39,8 @@ for val in $ENV_VALUES; do
     # 移除引號
     val=$(echo $val | sed "s/['\"]//g")
     
-    # 搜尋專案檔案 (排除 .env, .env.example, node_modules)
-    FOUND=$(grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude-dir="node_modules")
+    # 搜尋專案檔案 (排除 .env, .env.example, node_modules, package-lock.json)
+    FOUND=$(grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude="package-lock.json" --exclude-dir="node_modules")
     if [ ! -z "$FOUND" ]; then
         echo "錯誤：在以下檔案中發現硬編碼的環境變數值 ['$val']，請使用變數取代："
         echo "$FOUND"
