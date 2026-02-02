@@ -86,7 +86,7 @@ const App = () => {
             </React.Fragment>
           ))}
         </div>
-        <div className="text-base text-gray-400 font-mono shrink-0 px-2 select-none border-l border-gray-100">
+        <div className="text-lg text-gray-400 font-mono shrink-0 px-2 border-l border-gray-100">
           {gitSha}
         </div>
       </header>
@@ -98,13 +98,13 @@ const App = () => {
               <button onClick={() => setViewMode('list')} className="p-2 hover:bg-gray-200 rounded-full transition-colors mr-2">
                 <ArrowLeft size={24} className="text-gray-600" />
               </button>
-              <h2 className="text-lg font-medium truncate">{selectedFile?.name}</h2>
+              <h2 className="text-xl font-medium truncate">{selectedFile?.name}</h2>
             </div>
             <div className="p-2 bg-white">
               {selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name) ? (
                 <img src={fileContent} alt="" className="max-w-full h-auto mx-auto shadow-md rounded-sm" />
               ) : (
-                <pre className="text-base font-mono bg-gray-50 p-2 rounded-lg overflow-x-auto leading-relaxed border border-gray-200">
+                <pre className="text-lg font-mono bg-gray-50 p-2 rounded-lg overflow-x-auto leading-relaxed border border-gray-200">
                   {fileContent}
                 </pre>
               )}
@@ -133,10 +133,10 @@ const App = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-base text-gray-900 font-normal truncate block">{file.name}</span>
+                    <span className="text-lg text-gray-900 font-normal truncate block">{file.name}</span>
                   </div>
                   {file.type === 'file' && (
-                    <div className="text-base text-gray-500 font-normal ml-4 shrink-0">
+                    <div className="text-lg text-gray-500 font-normal ml-4 shrink-0">
                       {formatSize(file.size)}
                     </div>
                   )}

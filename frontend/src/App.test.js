@@ -78,14 +78,14 @@ test('adheres to font size and padding constraints', async () => {
       
       fontSizeClasses.forEach(cls => {
         const size = cls.split('-')[1];
-        // 1. 攔截預設的小字體類別
-        expect(['xs', 'sm']).not.toContain(size);
+        // 1. 攔截預設的小字體類別 (禁止 xs, sm, base)
+        expect(['xs', 'sm', 'base']).not.toContain(size);
         
-        // 2. 攔截自定義的小字體數值 (e.g., text-[10px])
+        // 2. 攔截自定義的小字體數值 (必須 >= 18px)
         const pixelMatch = size.match(/\[(\d+)px\]/);
         if (pixelMatch) {
           const pxValue = parseInt(pixelMatch[1]);
-          expect(pxValue).toBeGreaterThanOrEqual(16);
+          expect(pxValue).toBeGreaterThanOrEqual(18);
         }
       });
     }
