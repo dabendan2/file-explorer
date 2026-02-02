@@ -28,26 +28,11 @@ if [ ! -z "$(git status --porcelain)" ]; then
     git status --short
     exit 1
 fi
-echo "Git 狀態檢查通過。"
 
 echo "開始部署 explorer..."
 
-# 檢查檔案中是否含有 .env 內的硬編碼數值 (排除 .env, .env.example, .git, deploy.sh 自己)
-echo "檢查硬編碼變數中..."
-ENV_VALUES=$(grep -v '^#' .env | grep '=' | cut -d'=' -f2- | grep -v '^$')
-for val in $ENV_VALUES; do
-    # 移除引號
-    val=$(echo $val | sed "s/['\"]//g")
-    
-    # 搜尋專案檔案 (排除 .env, .env.example, node_modules, package-lock.json)
-    FOUND=$(grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude="package-lock.json" --exclude-dir="node_modules")
-    if [ ! -z "$FOUND" ]; then
-        echo "錯誤：在以下檔案中發現硬編碼的環境變數值 ['$val']，請使用變數取代："
-        echo "$FOUND"
-        exit 1
-    fi
-done
-echo "檢查通過，無硬編碼數值。"
+# 執行獨立檢查與測試腳本 (硬編碼檢查 & 單元測試)
+bash deploy/check.sh || exit 1
 
 # 確保目錄存在
 mkdir -p "$TARGET_DIR"
