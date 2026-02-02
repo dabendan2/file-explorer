@@ -2,3 +2,4 @@
 node_modules/
 *.log
 backend/version.txt
+frontend/build/
