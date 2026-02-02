@@ -1,9 +1,25 @@
 #!/bin/bash
 # explorer/deploy/precheck.sh
 
-# 1. 檢查檔案中是否含有 .env 內的硬編碼數值 (僅遵從 .gitignore)
-# 註解：敏感資訊如金鑰不能上傳到 git，禁止新增任何排除邏輯。
-# 如果覺得非敏感訊息或應該例外處理，需要取得人類同意。
+# 1. 檢查 .env 檔案及環境變數
+echo "正在執行 Pre-check: 檢查環境變數..."
+if [ ! -f .env ]; then
+    echo "錯誤：.env 檔案不存在，無法進行檢查。"
+    exit 1
+fi
+
+# 檢查必要的環境變數是否存在
+REQUIRED_VARS=("EXPLORER_DEPLOY_TARGET")
+for var in "${REQUIRED_VARS[@]}"; do
+    # 讀取 .env 並檢查變數 (處理可能存在的引號)
+    VAL=$(grep "^$var=" .env | cut -d'=' -f2- | sed "s/['\"]//g")
+    if [ -z "$VAL" ]; then
+        echo "錯誤：環境變數 $var 在 .env 中未定義或為空"
+        exit 1
+    fi
+done
+
+# 2. 檢查檔案中是否含有 .env 內的硬編碼數值 (僅遵從 .gitignore)
 echo "正在執行 Pre-check: 檢查硬編碼變數..."
 
 # 確保在迴圈中發現錯誤時能正確退出

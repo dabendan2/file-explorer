@@ -22,7 +22,7 @@ app.get('/api/files', (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}, Root: ${MOCK_ROOT}`);
 });
