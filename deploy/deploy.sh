@@ -12,7 +12,7 @@ mkdir -p "$EXPLORER_DEPLOY_TARGET"
 
 # 3. 建置前端靜態檔案並同步至目標部署目錄
 (cd frontend && npm run build)
-rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
+sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 
 # 4. 後端服務更新：清理舊程序、安裝依賴並重啟服務
 echo "正在啟動後端服務..."
