@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight } from 'lucide-react';
+import { Folder, File, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
-const Explorer = () => {
-  const [files, setFiles] = useState([]);
-  const [currentPath, setCurrentPath] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [versionError, setVersionError] = useState(null);
-  const [fileContent, setFileContent] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+const App = () => {
+  // Use environment variable for version matching
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
+  const [files, setFiles] = useState([]);
+  const [currentPath, setCurrentPath] = useState(() => {
+    return localStorage.getItem('explorer-path') || '';
+  });
+  const [loading, setLoading] = useState(true);
+  const [fileContent, setFileContent] = useState(null);
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'viewer'
+  const [selectedFile, setSelectedFile] = useState(null);
 
   const formatSize = (bytes) => {
     if (bytes === 0 || bytes === '-') return '-';
@@ -20,11 +23,16 @@ const Explorer = () => {
 
   const fetchFiles = (path = '') => {
     setLoading(true);
+    setViewMode('list');
     setFileContent(null);
     setSelectedFile(null);
+    
     const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
     fetch(url)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('API request failed');
+        return res.json();
+      })
       .then(data => {
         if (data.error) {
           console.error('API Error:', data.error);
@@ -33,6 +41,7 @@ const Explorer = () => {
         }
         setFiles(data);
         setCurrentPath(path);
+        localStorage.setItem('explorer-path', path);
         setLoading(false);
       })
       .catch(err => {
@@ -44,119 +53,149 @@ const Explorer = () => {
   const fetchFileContent = (file) => {
     setLoading(true);
     const path = currentPath ? `${currentPath}/${file.name}` : file.name;
-    fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
-      .then(res => res.text())
-      .then(text => {
-        setFileContent(text);
-        setSelectedFile(file.name);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch content:', err);
-        setLoading(false);
-      });
+    const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+    
+    if (isImage) {
+      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
+      setSelectedFile(file);
+      setViewMode('viewer');
+      setLoading(false);
+    } else {
+      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
+        .then(res => {
+          if (!res.ok) throw new Error('API content request failed');
+          return res.text();
+        })
+        .then(text => {
+          setFileContent(text);
+          setSelectedFile(file);
+          setViewMode('viewer');
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch content:', err);
+          setLoading(false);
+        });
+    }
   };
 
   useEffect(() => {
-    // 驗證版本吻合
+    // 1. Version Check - Must be first and MUST throw on mismatch
     fetch('/explorer/api/version')
-      .then(res => res.json())
-      .then(data => {
-        if (data.gitSha !== gitSha && gitSha !== 'unknown') {
-          setVersionError(`版本不吻合: 前端(${gitSha}) vs 後端(${data.gitSha})`);
-        }
+      .then(res => {
+        if (!res.ok) throw new Error('Version check failed');
+        return res.json();
       })
-      .catch(err => console.error('Failed to verify version:', err));
-
-    fetchFiles();
+      .then(data => {
+        const backendSha = data.gitSha;
+        if (backendSha !== gitSha && gitSha !== 'unknown') {
+          // Rule: Version mismatch must directly throw Error without try-catch
+          throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${backendSha})`);
+        }
+        // If version matches, then fetch data
+        fetchFiles(currentPath);
+      })
+      .catch(err => {
+        // If it's a version error, re-throw it to break the app as requested
+        if (err.message.includes('Git SHA mismatch')) {
+          throw err;
+        }
+        console.error('Initialization error:', err);
+        setLoading(false);
+      });
   }, []);
 
-  const navigateTo = (segment, index, allSegments) => {
-    const newPath = allSegments.slice(0, index + 1).join('/');
+  const navigateTo = (index) => {
+    const segments = currentPath.split('/');
+    const newPath = segments.slice(0, index + 1).join('/');
     fetchFiles(newPath);
   };
 
   const pathSegments = currentPath ? currentPath.split('/') : [];
 
   const getIconColor = (index) => {
-    const colors = ['text-blue-500', 'text-red-500', 'text-yellow-500', 'text-green-500'];
+    const colors = ['text-blue-400', 'text-red-400', 'text-yellow-400', 'text-green-400'];
     return colors[index % colors.length];
   };
 
+  const isImageFile = selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name);
+
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans">
-      {/* Header with Path Bar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center overflow-x-auto no-scrollbar py-1">
+    <div className="min-h-screen bg-[#FFF9F5] text-gray-800 font-sans selection:bg-pink-100 antialiased">
+      {/* 頂部路徑列 (Path Bar Component) - Google Style + 溫馨圓潤 */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-orange-100 px-2 py-1.5 shadow-sm">
+        <div className="flex items-center overflow-x-auto no-scrollbar scroll-smooth">
           <button 
             onClick={() => fetchFiles('')}
-            className="text-blue-600 font-medium whitespace-nowrap hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
+            className="text-blue-500 font-bold text-base whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
           >
-            Root
+            🏠 Home
           </button>
           {pathSegments.map((segment, i) => (
             <React.Fragment key={i}>
-              <ChevronRight size={16} className="text-gray-400 shrink-0 mx-1" />
+              <ChevronRight size={14} className="text-orange-200 shrink-0 mx-0.5" />
               <button
-                onClick={() => navigateTo(segment, i, pathSegments)}
-                className="text-blue-600 font-medium whitespace-nowrap hover:bg-blue-50 px-2 py-1 rounded-md transition-colors"
+                onClick={() => navigateTo(i)}
+                className="text-blue-500 font-medium text-base whitespace-nowrap px-2 py-1 rounded-xl hover:bg-blue-50 active:scale-95 transition-all"
               >
                 {segment}
               </button>
             </React.Fragment>
           ))}
         </div>
-        <div className="flex flex-col items-end shrink-0 ml-4">
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-            天
-          </div>
-          <span className="text-[8px] text-gray-400 font-mono mt-1">#{gitSha}</span>
-        </div>
       </header>
 
       {/* Main Content */}
-      <main className="p-4">
-        {versionError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium">
-            {versionError}
-          </div>
-        )}
-
-        {fileContent !== null ? (
-          <div className="bg-gray-50 rounded-xl p-4 overflow-auto max-h-[calc(100vh-160px)] border border-gray-100">
-            <div className="flex justify-between items-center mb-4 sticky top-0 bg-gray-50 py-1">
-              <h3 className="font-medium text-gray-700 truncate mr-4">{selectedFile}</h3>
+      <main className="p-2 max-w-2xl mx-auto">
+        {viewMode === 'viewer' ? (
+          /* 內容檢視器 (File Viewer) - 溫馨舒適切換 */
+          <div className="bg-white rounded-[1.5rem] p-2 border border-orange-50 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex justify-between items-center mb-2 px-1">
+              <h3 className="font-bold text-gray-700 truncate mr-2 text-base">📄 {selectedFile?.name}</h3>
               <button 
-                onClick={() => {setFileContent(null); setSelectedFile(null);}}
-                className="text-blue-600 text-sm font-medium shrink-0"
+                onClick={() => setViewMode('list')}
+                className="bg-orange-100 text-orange-600 text-base font-bold px-3 py-1 rounded-full active:scale-90 transition-transform"
               >
-                關閉
+                返回
               </button>
             </div>
-            <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">{fileContent}</pre>
+            <div className="overflow-auto max-h-[calc(100vh-140px)] rounded-xl bg-orange-50/30">
+              {isImageFile ? (
+                <img src={fileContent} alt={selectedFile.name} className="max-w-full h-auto rounded-lg mx-auto shadow-inner" />
+              ) : (
+                <pre className="text-base font-mono text-gray-700 whitespace-pre-wrap leading-relaxed p-2">
+                  {fileContent}
+                </pre>
+              )}
+            </div>
           </div>
         ) : (
-          <div className="space-y-1">
+          /* 下方列表 (File List Component) - 極簡可愛溫馨 */
+          <div className="space-y-1.5">
             {loading ? (
-              <div className="flex justify-center py-10">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="flex flex-col items-center justify-center py-24 gap-4">
+                <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-400 rounded-full animate-spin"></div>
+                <p className="text-orange-300 font-medium text-base">正在準備您的檔案...</p>
               </div>
             ) : (
               files.map((file, i) => (
                 <div 
                   key={i} 
-                  className="flex items-center p-3 hover:bg-gray-50 rounded-xl transition-colors active:bg-gray-100 cursor-pointer"
+                  className="group flex items-center p-1.5 bg-white/40 hover:bg-white active:bg-orange-50 rounded-[1rem] transition-all cursor-pointer border border-transparent hover:border-orange-50 active:shadow-inner"
                   onClick={() => file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file)}
                 >
-                  <div className={`p-2 rounded-lg mr-4 ${file.type === 'folder' ? 'bg-gray-100' : ''}`}>
+                  <div className={`w-11 h-11 rounded-2xl mr-3 flex items-center justify-center shrink-0 ${file.type === 'folder' ? 'bg-orange-50' : 'bg-blue-50'}`}>
                     {file.type === 'folder' ? 
-                      <Folder size={24} className={getIconColor(i)} fill="currentColor" fillOpacity="0.2" /> : 
-                      <File size={24} className="text-gray-400" />
+                      <Folder size={22} className={getIconColor(i)} /> : 
+                      (/\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
+                        <ImageIcon size={22} className="text-blue-400" /> : 
+                        <File size={22} className="text-gray-400" />
+                      )
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-normal truncate">{file.name}</div>
-                    <div className="text-xs text-gray-500 flex gap-2">
+                    <div className="text-base font-bold text-gray-700 truncate leading-tight">{file.name}</div>
+                    <div className="text-xs text-gray-400 font-medium flex gap-2 mt-0.5">
                       <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
                       <span>•</span>
                       <span>{file.modified}</span>
@@ -169,10 +208,11 @@ const Explorer = () => {
         )}
       </main>
 
-      {/* Version Tag */}
-      <div className="hidden" data-version="1.0.3" data-git-sha={gitSha}>v1.0.3-{gitSha}</div>
+      {/* Aesthetic Decoration */}
+      <div className="fixed -bottom-6 -left-6 w-32 h-32 bg-orange-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+      <div className="fixed -top-6 -right-6 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
     </div>
   );
 };
 
-export default Explorer;
+export default App;
