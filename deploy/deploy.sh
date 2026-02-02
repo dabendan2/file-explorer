@@ -39,8 +39,8 @@ for val in $ENV_VALUES; do
     # 移除引號
     val=$(echo $val | sed "s/['\"]//g")
     
-    # 搜尋專案檔案 (僅排除 .env)
-    FOUND=$(grep -rF "$val" . --exclude=".env")
+    # 搜尋專案檔案 (僅排除 .env 與 .env.example)
+    FOUND=$(grep -rF "$val" . --exclude=".env" --exclude=".env.example")
     if [ ! -z "$FOUND" ]; then
         echo "錯誤：在以下檔案中發現硬編碼的環境變數值 ['$val']，請使用變數取代："
         echo "$FOUND"
