@@ -10,7 +10,7 @@ else
 fi
 
 # 檢查必要的環境變數是否存在
-REQUIRED_VARS=("EXPLORER_BUILD_DIR" "EXPLORER_DEPLOY_TARGET")
+REQUIRED_VARS=("EXPLORER_DEPLOY_TARGET")
 for var in "${REQUIRED_VARS[@]}"; do
     if [ -z "${!var}" ]; then
         echo "錯誤：環境變數 $var 未定義"
@@ -18,7 +18,7 @@ for var in "${REQUIRED_VARS[@]}"; do
     fi
 done
 
-SOURCE_DIR=${EXPLORER_BUILD_DIR}
+SOURCE_DIR="./build/"
 TARGET_DIR=${EXPLORER_DEPLOY_TARGET}
 
 # 檢查環境變數變更
