@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const app = express();
 
-const MOCK_ROOT = process.env.MOCK_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
+const MOCK_ROOT = process.env.MOCK_ROOT || '/home/ubuntu/.openclaw/workspace';
 
 // API: 讀取沙箱目錄內容並返回檔案列表
 app.get('/api/files', (req, res) => {
