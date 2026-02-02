@@ -13,7 +13,7 @@ async function runSandboxTest() {
   // Wait for server to start
   await new Promise(resolve => setTimeout(resolve, 2000));
 
-  http.get('http://localhost:5001/files', (res) => {
+  http.get('http://localhost:5001/api/files', (res) => {
     let data = '';
     res.on('data', chunk => data += chunk);
     res.on('end', () => {
