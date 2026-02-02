@@ -8,9 +8,9 @@ if [ -n "$FRONTEND_URL" ]; then
     # 確認後端埠號已開啟監聽
     lsof -Pi :${PORT:-5000} -sTCP:LISTEN -t >/dev/null
     
-    # 檢查後端本地 API
+    # 檢查後端本地 API (注意：後端路由現在包含 /explorer/api)
     echo "驗證本地 API..."
-    curl -sf -o /dev/null "http://localhost:${PORT:-5000}/api/files"
+    curl -sf -o /dev/null "http://localhost:${PORT:-5000}/explorer/api/files"
     
     # 檢查對外前端域名
     echo "驗證對外前端入口..."
@@ -25,7 +25,7 @@ if [ -n "$FRONTEND_URL" ]; then
     # 2. 驗證後端版本注入
     if [ -n "$REACT_APP_GIT_SHA" ]; then
         echo "正在驗證後端 Git SHA: $REACT_APP_GIT_SHA"
-        curl -sf "http://localhost:${PORT:-5000}/api/version" | grep -q "$REACT_APP_GIT_SHA"
+        curl -sf "http://localhost:${PORT:-5000}/explorer/api/version" | grep -q "$REACT_APP_GIT_SHA"
     fi
 
     # 3. 驗證 UI 版本

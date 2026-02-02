@@ -7,7 +7,7 @@ const app = express();
 const MOCK_ROOT = process.env.MOCK_ROOT || '/home/ubuntu/.openclaw/workspace';
 
 // API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
-app.get('/api/files', (req, res) => {
+app.get('/explorer/api/files', (req, res) => {
   try {
     const subPath = req.query.path || '';
     const fullPath = path.join(MOCK_ROOT, subPath);
@@ -37,7 +37,7 @@ app.get('/api/files', (req, res) => {
 });
 
 // API: 獲取系統版本資訊
-app.get('/api/version', (req, res) => {
+app.get('/explorer/api/version', (req, res) => {
   res.json({
     version: process.env.REACT_APP_VERSION || '1.0.0',
     gitSha: process.env.REACT_APP_GIT_SHA || 'unknown'
