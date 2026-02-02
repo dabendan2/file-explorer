@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight, Search, HardDrive, Clock, Star } from 'lucide-react';
+import { Folder, File, Search, Menu, MoreVertical, Plus } from 'lucide-react';
 
 const Explorer = () => {
   const [files, setFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // 格式化檔案大小
   const formatSize = (bytes) => {
     if (bytes === 0 || bytes === '-') return '-';
     const k = 1024;
@@ -15,7 +14,6 @@ const Explorer = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  // 從 API 獲取檔案列表
   useEffect(() => {
     fetch('/api/files')
       .then(res => res.json())
@@ -29,93 +27,85 @@ const Explorer = () => {
       });
   }, []);
 
+  const getIconColor = (index) => {
+    const colors = ['text-blue-500', 'text-red-500', 'text-yellow-500', 'text-green-500'];
+    return colors[index % colors.length];
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between font-bold text-blue-600">
-          <div className="flex items-center gap-2">
-            <HardDrive size={20} />
-            <span>Explorer</span>
-          </div>
-          <span className="text-[10px] text-gray-400 font-mono select-none" data-version="1.0.1">
-            v1.0.1
-          </span>
+    <div className="min-h-screen bg-white text-gray-900 font-sans pb-20">
+      {/* Google Style Header */}
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-4">
+        <Menu size={24} className="text-gray-600" />
+        <div className="flex-1 bg-gray-100 rounded-full flex items-center px-4 py-2 gap-3 focus-within:bg-white focus-within:shadow-md transition-all">
+          <Search size={18} className="text-gray-500" />
+          <input
+            type="text"
+            placeholder="在 Explorer 中搜尋"
+            className="bg-transparent border-none w-full outline-none text-base"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          <nav className="space-y-1">
-            <div className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-              <Star size={16} className="text-amber-600" />
-              <span>Favorites</span>
-            </div>
-            <div className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-lg cursor-pointer text-sm">
-              <Clock size={16} className="text-blue-600" />
-              <span>Recent</span>
-            </div>
-            <div className="pt-4 pb-2 px-2 text-xs font-bold text-gray-400 uppercase">Locations</div>
-            <div className="flex items-center gap-2 p-2 bg-blue-100 text-blue-600 rounded-lg cursor-pointer text-sm font-medium">
-              <Folder size={16} />
-              <span>Root (/)</span>
-            </div>
-          </nav>
+        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+          天
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Toolbar */}
-        <div className="h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="flex items-center gap-1 text-sm text-gray-500 overflow-hidden">
-              <span className="hover:text-blue-600 cursor-pointer">Computer</span>
-              <ChevronRight size={14} />
-              <span className="font-medium text-gray-800 truncate">/</span>
+      <main className="p-4">
+        <h2 className="text-sm font-medium text-gray-500 mb-4 px-1">建議檔案</h2>
+        
+        <div className="space-y-1">
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
-          </div>
-          <div className="flex items-center gap-2 w-64">
-            <div className="relative w-full">
-              <Search className="absolute left-2.5 top-2.5 text-gray-400" size={16} />
-              <input
-                type="text"
-                placeholder="Search files..."
-                className="w-full bg-gray-100 border-none rounded-full py-1.5 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-blue-600/50 transition-colors"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          ) : files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).map((file, i) => (
+            <div key={i} className="flex items-center p-3 hover:bg-gray-50 rounded-xl transition-colors active:bg-gray-100">
+              <div className={`p-2 rounded-lg mr-4 ${file.type === 'folder' ? 'bg-gray-100' : ''}`}>
+                {file.type === 'folder' ? 
+                  <Folder size={24} className={getIconColor(i)} fill="currentColor" fillOpacity="0.2" /> : 
+                  <File size={24} className="text-gray-400" />
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-normal truncate">{file.name}</div>
+                <div className="text-xs text-gray-500 flex gap-2">
+                  <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
+                  <span>•</span>
+                  <span>{file.modified}</span>
+                </div>
+              </div>
+              <MoreVertical size={20} className="text-gray-400 ml-2" />
             </div>
-          </div>
+          ))}
         </div>
+      </main>
 
-        {/* File Grid/List */}
-        <div className="flex-1 overflow-auto p-4">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="text-xs font-bold text-gray-400 uppercase border-b border-gray-200">
-                <th className="py-3 px-4">Name</th>
-                <th className="py-3 px-4">Size</th>
-                <th className="py-3 px-4">Modified</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="3" className="py-4 text-center text-sm text-gray-500">Loading files...</td></tr>
-              ) : files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).map((file, i) => (
-                <tr key={i} className="hover:bg-gray-100 group cursor-pointer border-b border-gray-50 transition-colors">
-                  <td className="py-2 px-4 flex items-center gap-3">
-                    {file.type === 'folder' ? 
-                      <Folder size={18} className="text-blue-600 fill-blue-100" /> : 
-                      <File size={18} className="text-gray-400" />
-                    }
-                    <span className="text-sm font-medium truncate">{file.name}</span>
-                  </td>
-                  <td className="py-2 px-4 text-sm text-gray-500">{file.type === 'file' ? formatSize(file.size) : '-'}</td>
-                  <td className="py-2 px-4 text-sm text-gray-500">{file.modified}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Floating Action Button */}
+      <button className="fixed right-6 bottom-6 w-14 h-14 bg-white shadow-lg rounded-2xl flex items-center justify-center text-gray-700 border border-gray-100 hover:shadow-xl active:scale-95 transition-all">
+        <Plus size={28} className="text-blue-600" />
+      </button>
+
+      {/* Navigation Rail / Bottom Nav */}
+      <footer className="fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-gray-100 flex items-center justify-around px-6">
+        <div className="flex flex-col items-center text-blue-600">
+          <Folder size={24} fill="currentColor" fillOpacity="0.2" />
+          <span className="text-[10px] mt-1 font-medium">檔案</span>
         </div>
-      </div>
+        <div className="flex flex-col items-center text-gray-500">
+          <Search size={24} />
+          <span className="text-[10px] mt-1 font-medium">搜尋</span>
+        </div>
+        <div className="flex flex-col items-center text-gray-500">
+          <Menu size={24} />
+          <span className="text-[10px] mt-1 font-medium">共用</span>
+        </div>
+      </footer>
+      
+      {/* Version Tag */}
+      <div className="hidden" data-version="1.0.2">v1.0.2</div>
     </div>
   );
 };

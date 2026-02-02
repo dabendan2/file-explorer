@@ -2,10 +2,11 @@ import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
 
-test('renders explorer title', () => {
+test('renders app container', () => {
   render(<App />);
-  const linkElement = screen.getByText(/Explorer/i);
-  expect(linkElement).toBeInTheDocument();
+  // Check for search placeholder which is unique in mobile view
+  const searchPlaceholder = screen.getByPlaceholderText(/搜尋/i);
+  expect(searchPlaceholder).toBeInTheDocument();
 });
 
 test('renders file list with correct sizes from mocked fetch', async () => {
@@ -25,7 +26,8 @@ test('renders file list with correct sizes from mocked fetch', async () => {
   expect(await screen.findByText(/README.md/i)).toBeInTheDocument();
   expect(screen.getByText(/1.2 KB/i)).toBeInTheDocument();
   expect(screen.getByText(/empty.txt/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/-/i).length).toBeGreaterThan(0);
+  // In mobile view, folders show "資料夾" instead of "-"
+  expect(screen.getByText(/資料夾/i)).toBeInTheDocument();
 
   global.fetch.mockRestore();
 });
