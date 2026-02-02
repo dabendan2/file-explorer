@@ -5,6 +5,7 @@ const Explorer = () => {
   const [files, setFiles] = useState([]);
   const [currentPath, setCurrentPath] = useState('');
   const [loading, setLoading] = useState(true);
+  const [versionError, setVersionError] = useState(null);
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
 
   const formatSize = (bytes) => {
@@ -32,6 +33,16 @@ const Explorer = () => {
   };
 
   useEffect(() => {
+    // 驗證版本吻合
+    fetch('/explorer/api/version')
+      .then(res => res.json())
+      .then(data => {
+        if (data.gitSha !== gitSha && gitSha !== 'unknown') {
+          setVersionError(`版本不吻合: 前端(${gitSha}) vs 後端(${data.gitSha})`);
+        }
+      })
+      .catch(err => console.error('Failed to verify version:', err));
+
     fetchFiles();
   }, []);
 
@@ -80,6 +91,11 @@ const Explorer = () => {
 
       {/* Main Content */}
       <main className="p-4">
+        {versionError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm font-medium">
+            {versionError}
+          </div>
+        )}
         <div className="space-y-1">
           {loading ? (
             <div className="flex justify-center py-10">
