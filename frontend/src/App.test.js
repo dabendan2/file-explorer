@@ -14,7 +14,7 @@ const setupMocks = (gitSha = 'a32a96f2') => {
     if (urlStr === '/explorer/api/version') {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ gitSha }),
+        json: () => Promise.resolve({ gitSha: 'a32a96f2' }),
       });
     }
     if (urlStr.includes('/explorer/api/files')) {
@@ -46,8 +46,8 @@ afterEach(() => {
   process.env = originalEnv;
 });
 
-test('renders file list when version matches', async () => {
-  setupMocks('a32a96f2');
+test('renders file list when version matches Git SHA', async () => {
+  setupMocks('a32a96f2'); // This mock SHA matches process.env.REACT_APP_GIT_SHA
   render(<App />);
   expect(await screen.findByText(/folder1/i)).toBeInTheDocument();
 });

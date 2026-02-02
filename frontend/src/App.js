@@ -80,7 +80,7 @@ const App = () => {
   };
 
   useEffect(() => {
-    // 1. Version Check - Must be first and MUST throw on mismatch
+    // 1. Version Check - Verify injected Git SHA matches Backend
     fetch('/explorer/api/version')
       .then(res => {
         if (!res.ok) throw new Error('Version check failed');
@@ -89,14 +89,13 @@ const App = () => {
       .then(data => {
         const backendSha = data.gitSha;
         if (backendSha !== gitSha && gitSha !== 'unknown') {
-          // Rule: Version mismatch must directly throw Error without try-catch
+          // Rule: Mismatch must directly throw
           throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${backendSha})`);
         }
-        // If version matches, then fetch data
+        // If matches, fetch data
         fetchFiles(currentPath);
       })
       .catch(err => {
-        // If it's a version error, re-throw it to break the app as requested
         if (err.message.includes('Git SHA mismatch')) {
           throw err;
         }
