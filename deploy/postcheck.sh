@@ -11,6 +11,12 @@ if [ -n "$FRONTEND_URL" ]; then
     curl -sf -o /dev/null "http://localhost:${PORT:-5000}/api/files"
     # 檢查對外前端域名是否可訪問
     curl -sf -o /dev/null "$FRONTEND_URL"
+
+    # 2. 驗證 UI 版本注入是否吻合
+    if [ -n "$REACT_APP_VERSION" ]; then
+        echo "正在驗證 UI 版本: v$REACT_APP_VERSION"
+        curl -sL "$FRONTEND_URL" | grep -q "data-version=\"$REACT_APP_VERSION\""
+    fi
 fi
 
 echo "Post-check 已完成。"

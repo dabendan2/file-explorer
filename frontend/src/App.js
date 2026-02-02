@@ -33,9 +33,14 @@ const Explorer = () => {
     <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
-        <div className="p-4 border-b border-gray-200 flex items-center gap-2 font-bold text-blue-600">
-          <HardDrive size={20} />
-          <span>Explorer</span>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between font-bold text-blue-600">
+          <div className="flex items-center gap-2">
+            <HardDrive size={20} />
+            <span>Explorer</span>
+          </div>
+          <span className="text-[10px] text-gray-400 font-mono select-none" data-version={process.env.REACT_APP_VERSION}>
+            v{process.env.REACT_APP_VERSION}
+          </span>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           <nav className="space-y-1">
