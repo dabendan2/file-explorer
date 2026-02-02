@@ -31,8 +31,8 @@ fi
 
 echo "開始部署 explorer..."
 
-# 執行獨立檢查與測試腳本 (硬編碼檢查 & 單元測試)
-bash deploy/check.sh || exit 1
+# 執行部署前檢查 (Pre-check)
+bash deploy/precheck.sh || exit 1
 
 # 確保目錄存在
 mkdir -p "$TARGET_DIR"
@@ -97,3 +97,6 @@ else
     echo "錯誤：後端服務啟動失敗，請檢查 backend/server.log。"
     exit 1
 fi
+
+# 執行部署後檢查 (Post-check)
+bash deploy/postcheck.sh || exit 1
