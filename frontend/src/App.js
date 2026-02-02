@@ -48,8 +48,11 @@ const Explorer = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-          天
+        <div className="flex flex-col items-end shrink-0">
+          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
+            天
+          </div>
+          <span className="text-[8px] text-gray-400 font-mono mt-1">#{gitSha}</span>
         </div>
       </header>
 
