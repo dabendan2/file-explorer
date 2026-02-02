@@ -4,8 +4,9 @@ import App from './App';
 
 test('renders app container', () => {
   render(<App />);
-  const searchPlaceholder = screen.getByPlaceholderText(/搜尋/i);
-  expect(searchPlaceholder).toBeInTheDocument();
+  // Check for Root breadcrumb
+  const rootButton = screen.getByText(/Root/i);
+  expect(rootButton).toBeInTheDocument();
 });
 
 test('renders file list with correct sizes from mocked fetch', async () => {

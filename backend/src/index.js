@@ -6,18 +6,34 @@ const app = express();
 
 const MOCK_ROOT = process.env.MOCK_ROOT || '/home/ubuntu/.openclaw/workspace';
 
-// API: 讀取沙箱目錄內容並返回檔案列表
+// API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
 app.get('/api/files', (req, res) => {
-  const files = fs.readdirSync(MOCK_ROOT).map(name => {
-    const stats = fs.statSync(path.join(MOCK_ROOT, name));
-    return {
-      name,
-      type: stats.isDirectory() ? 'folder' : 'file',
-      size: stats.size,
-      modified: stats.mtime.toISOString().split('T')[0]
-    };
-  });
-  res.json(files);
+  try {
+    const subPath = req.query.path || '';
+    const fullPath = path.join(MOCK_ROOT, subPath);
+
+    // 安全檢查：確保路徑在 MOCK_ROOT 內
+    if (!fullPath.startsWith(MOCK_ROOT)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: 'Path not found' });
+    }
+
+    const files = fs.readdirSync(fullPath).map(name => {
+      const stats = fs.statSync(path.join(fullPath, name));
+      return {
+        name,
+        type: stats.isDirectory() ? 'folder' : 'file',
+        size: stats.size,
+        modified: stats.mtime.toISOString().split('T')[0]
+      };
+    });
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // API: 獲取系統版本資訊
