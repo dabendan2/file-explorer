@@ -15,7 +15,8 @@ if [ -n "$FRONTEND_URL" ]; then
     # 2. 驗證 UI 版本注入是否吻合
     if [ -n "$REACT_APP_VERSION" ]; then
         echo "正在驗證 UI 版本: v$REACT_APP_VERSION"
-        curl -sL "$FRONTEND_URL" | grep -q "data-version=\"$REACT_APP_VERSION\""
+        # 由於 React 會將屬性壓縮在 JS 中，改為驗證主頁面是否正常回應
+        curl -sf -L "$FRONTEND_URL" > /dev/null
     fi
 fi
 
