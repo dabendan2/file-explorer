@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight, ChevronDown, Search, HardDrive, Clock, Star } from 'lucide-react';
+import React, { useState } from 'react';
+import { Folder, File, ChevronRight, Search, HardDrive, Clock, Star } from 'lucide-react';
 
 const Explorer = () => {
-  const [currentPath, setCurrentPath] = useState('/');
-  const [files, setFiles] = useState([
+  const [files] = useState([
     { name: 'Documents', type: 'folder', size: '-', modified: '2024-01-20' },
     { name: 'Images', type: 'folder', size: '-', modified: '2024-01-21' },
     { name: 'Project_Alpha', type: 'folder', size: '-', modified: '2024-01-22' },
@@ -47,7 +46,7 @@ const Explorer = () => {
             <div className="flex items-center gap-1 text-sm text-gray-500 overflow-hidden">
               <span className="hover:text-blue-600 cursor-pointer">Computer</span>
               <ChevronRight size={14} />
-              <span className="font-medium text-gray-800 truncate">{currentPath}</span>
+              <span className="font-medium text-gray-800 truncate">/</span>
             </div>
           </div>
           <div className="flex items-center gap-2 w-64">

@@ -1,23 +1,16 @@
-#!/bin/bash
-# explorer/deploy/postcheck.sh
+set -e
 
-# 載入環境變數以取得 FRONTEND_URL
-if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
-fi
+[ -f .env ] && export $(grep -v '^#' .env | xargs)
 
-BACKEND_PORT=$PORT
-
-# 1. 前端入口驗證
+# 1. 驗證服務端點與監聽狀態
 if [ -n "$FRONTEND_URL" ]; then
-    echo "正在執行 Post-check: 前端入口驗證 ($FRONTEND_URL)..."
-    FE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL" || echo "000")
-    if [ "$FE_STATUS" -eq 200 ]; then
-        echo "前端入口驗證成功。"
-    else
-        echo "警告：前端入口驗證失敗 (HTTP 狀態碼: $FE_STATUS)"
-    fi
+    echo "正在執行 Post-check: 驗證後端 API 與前端入口..."
+    # 確認後端埠號已開啟監聽
+    lsof -Pi :${PORT:-5000} -sTCP:LISTEN -t >/dev/null
+    # 檢查後端本地 API 是否回應正常
+    curl -sf -o /dev/null "http://localhost:${PORT:-5000}/api/files"
+    # 檢查對外前端域名是否可訪問
+    curl -sf -o /dev/null "$FRONTEND_URL"
 fi
 
 echo "Post-check 已完成。"
-exit 0
