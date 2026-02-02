@@ -15,8 +15,13 @@ if [ -n "$FRONTEND_URL" ]; then
     # 2. 驗證 UI 版本注入是否吻合
     if [ -n "$REACT_APP_VERSION" ]; then
         echo "正在驗證 UI 版本: v$REACT_APP_VERSION"
-        # 由於 React 會將屬性壓縮在 JS 中，改為驗證主頁面是否正常回應
-        curl -sf -L "$FRONTEND_URL" > /dev/null
+        curl -sf -L "$FRONTEND_URL" | grep -q "data-version=\"$REACT_APP_VERSION\""
+    fi
+
+    # 3. 驗證 Git Commit ID 注入
+    if [ -n "$REACT_APP_GIT_SHA" ]; then
+        echo "正在驗證 Git SHA: $REACT_APP_GIT_SHA"
+        curl -sf -L "$FRONTEND_URL" | grep -q "data-git-sha=\"$REACT_APP_GIT_SHA\""
     fi
 fi
 

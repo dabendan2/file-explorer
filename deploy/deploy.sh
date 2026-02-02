@@ -11,7 +11,8 @@ echo "開始部署 explorer..."
 mkdir -p "$EXPLORER_DEPLOY_TARGET"
 
 # 3. 建置前端靜態檔案並同步至目標部署目錄
-(cd frontend && REACT_APP_VERSION="$REACT_APP_VERSION" npm run build)
+export REACT_APP_GIT_SHA=$(git rev-parse --short HEAD)
+(cd frontend && REACT_APP_VERSION="$REACT_APP_VERSION" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" npm run build)
 sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 
 # 4. 後端服務更新：清理舊程序、安裝依賴並重啟服務
