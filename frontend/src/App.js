@@ -38,8 +38,8 @@ const Explorer = () => {
             <HardDrive size={20} />
             <span>Explorer</span>
           </div>
-          <span className="text-[10px] text-gray-400 font-mono select-none" data-version={process.env.REACT_APP_VERSION}>
-            v{process.env.REACT_APP_VERSION}
+          <span className="text-[10px] text-gray-400 font-mono select-none" data-version="1.0.1">
+            v1.0.1
           </span>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
