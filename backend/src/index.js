@@ -44,6 +44,23 @@ app.get('/explorer/api/version', (req, res) => {
   });
 });
 
+// API: 讀取檔案內容
+app.get('/explorer/api/content', (req, res) => {
+  try {
+    const filePath = req.query.path;
+    if (!filePath) return res.status(400).json({ error: 'Path required' });
+    
+    const fullPath = path.join(MOCK_ROOT, filePath);
+    if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return res.status(404).json({ error: 'File not found' });
+
+    const content = fs.readFileSync(fullPath, 'utf8');
+    res.send(content);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 啟動監聽埠號
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

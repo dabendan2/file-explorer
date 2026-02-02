@@ -6,6 +6,8 @@ const Explorer = () => {
   const [currentPath, setCurrentPath] = useState('');
   const [loading, setLoading] = useState(true);
   const [versionError, setVersionError] = useState(null);
+  const [fileContent, setFileContent] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
 
   const formatSize = (bytes) => {
@@ -18,16 +20,39 @@ const Explorer = () => {
 
   const fetchFiles = (path = '') => {
     setLoading(true);
+    setFileContent(null);
+    setSelectedFile(null);
     const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
     fetch(url)
       .then(res => res.json())
       .then(data => {
+        if (data.error) {
+          console.error('API Error:', data.error);
+          setLoading(false);
+          return;
+        }
         setFiles(data);
         setCurrentPath(path);
         setLoading(false);
       })
       .catch(err => {
         console.error('Failed to fetch files:', err);
+        setLoading(false);
+      });
+  };
+
+  const fetchFileContent = (file) => {
+    setLoading(true);
+    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
+    fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
+      .then(res => res.text())
+      .then(text => {
+        setFileContent(text);
+        setSelectedFile(file.name);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch content:', err);
         setLoading(false);
       });
   };
@@ -96,36 +121,52 @@ const Explorer = () => {
             {versionError}
           </div>
         )}
-        <div className="space-y-1">
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : (
-            files.map((file, i) => (
-              <div 
-                key={i} 
-                className="flex items-center p-3 hover:bg-gray-50 rounded-xl transition-colors active:bg-gray-100 cursor-pointer"
-                onClick={() => file.type === 'folder' && fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name)}
+
+        {fileContent !== null ? (
+          <div className="bg-gray-50 rounded-xl p-4 overflow-auto max-h-[calc(100vh-160px)] border border-gray-100">
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-gray-50 py-1">
+              <h3 className="font-medium text-gray-700 truncate mr-4">{selectedFile}</h3>
+              <button 
+                onClick={() => {setFileContent(null); setSelectedFile(null);}}
+                className="text-blue-600 text-sm font-medium shrink-0"
               >
-                <div className={`p-2 rounded-lg mr-4 ${file.type === 'folder' ? 'bg-gray-100' : ''}`}>
-                  {file.type === 'folder' ? 
-                    <Folder size={24} className={getIconColor(i)} fill="currentColor" fillOpacity="0.2" /> : 
-                    <File size={24} className="text-gray-400" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-normal truncate">{file.name}</div>
-                  <div className="text-xs text-gray-500 flex gap-2">
-                    <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
-                    <span>•</span>
-                    <span>{file.modified}</span>
+                關閉
+              </button>
+            </div>
+            <pre className="text-xs font-mono text-gray-800 whitespace-pre-wrap">{fileContent}</pre>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              files.map((file, i) => (
+                <div 
+                  key={i} 
+                  className="flex items-center p-3 hover:bg-gray-50 rounded-xl transition-colors active:bg-gray-100 cursor-pointer"
+                  onClick={() => file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file)}
+                >
+                  <div className={`p-2 rounded-lg mr-4 ${file.type === 'folder' ? 'bg-gray-100' : ''}`}>
+                    {file.type === 'folder' ? 
+                      <Folder size={24} className={getIconColor(i)} fill="currentColor" fillOpacity="0.2" /> : 
+                      <File size={24} className="text-gray-400" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-normal truncate">{file.name}</div>
+                    <div className="text-xs text-gray-500 flex gap-2">
+                      <span>{file.type === 'folder' ? '資料夾' : formatSize(file.size)}</span>
+                      <span>•</span>
+                      <span>{file.modified}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              ))
+            )}
+          </div>
+        )}
       </main>
 
       {/* Version Tag */}
