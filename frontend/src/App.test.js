@@ -8,10 +8,23 @@ test('renders explorer title', () => {
   expect(linkElement).toBeInTheDocument();
 });
 
-test('renders file list with correct sizes', () => {
+test('renders file list with correct sizes from mocked fetch', async () => {
+  const mockFiles = [
+    { name: 'README.md', type: 'file', size: 1228.8, modified: '2024-01-22' },
+    { name: 'config.json', type: 'file', size: 512, modified: '2024-01-22' }
+  ];
+  jest.spyOn(global, 'fetch').mockImplementation(() =>
+    Promise.resolve({
+      json: () => Promise.resolve(mockFiles),
+    })
+  );
+
   render(<App />);
-  expect(screen.getByText(/README.md/i)).toBeInTheDocument();
+  
+  expect(await screen.findByText(/README.md/i)).toBeInTheDocument();
   expect(screen.getByText(/1.2 KB/i)).toBeInTheDocument();
   expect(screen.getByText(/config.json/i)).toBeInTheDocument();
   expect(screen.getByText(/512 B/i)).toBeInTheDocument();
+
+  global.fetch.mockRestore();
 });

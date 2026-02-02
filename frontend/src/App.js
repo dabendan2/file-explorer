@@ -1,15 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Folder, File, ChevronRight, Search, HardDrive, Clock, Star } from 'lucide-react';
 
 const Explorer = () => {
-  const [files] = useState([
-    { name: 'Documents', type: 'folder', size: '-', modified: '2024-01-20' },
-    { name: 'Images', type: 'folder', size: '-', modified: '2024-01-21' },
-    { name: 'Project_Alpha', type: 'folder', size: '-', modified: '2024-01-22' },
-    { name: 'README.md', type: 'file', size: '1.2 KB', modified: '2024-01-22' },
-    { name: 'config.json', type: 'file', size: '512 B', modified: '2024-01-22' }
-  ]);
+  const [files, setFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // 格式化檔案大小
+  const formatSize = (bytes) => {
+    if (bytes === 0 || bytes === '-') return '-';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  // 從 API 獲取檔案列表
+  useEffect(() => {
+    fetch('/api/files')
+      .then(res => res.json())
+      .then(data => {
+        setFiles(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to fetch files:', err);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
@@ -74,7 +92,9 @@ const Explorer = () => {
               </tr>
             </thead>
             <tbody>
-              {files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).map((file, i) => (
+              {loading ? (
+                <tr><td colSpan="3" className="py-4 text-center text-sm text-gray-500">Loading files...</td></tr>
+              ) : files.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase())).map((file, i) => (
                 <tr key={i} className="hover:bg-gray-100 group cursor-pointer border-b border-gray-50 transition-colors">
                   <td className="py-2 px-4 flex items-center gap-3">
                     {file.type === 'folder' ? 
@@ -83,7 +103,7 @@ const Explorer = () => {
                     }
                     <span className="text-sm font-medium truncate">{file.name}</span>
                   </td>
-                  <td className="py-2 px-4 text-sm text-gray-500">{file.size}</td>
+                  <td className="py-2 px-4 text-sm text-gray-500">{file.type === 'file' ? formatSize(file.size) : '-'}</td>
                   <td className="py-2 px-4 text-sm text-gray-500">{file.modified}</td>
                 </tr>
               ))}
