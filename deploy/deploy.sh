@@ -79,7 +79,8 @@ fi
 
 # 2. 啟動後端服務
 echo "正在啟動後端服務..."
-nohup node ../backend/src/index.js > ../backend/server.log 2>&1 &
+mkdir -p backend
+nohup node backend/src/index.js > backend/server.log 2>&1 &
 sleep 3
 
 # 3. 驗證服務狀態 (假設監聽 5000 埠)
