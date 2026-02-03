@@ -6,6 +6,7 @@ const App = () => {
   const [files, setFiles] = useState([]);
   const [currentPath, setCurrentPath] = useState(() => localStorage.getItem('explorer-path') || '');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [fileContent, setFileContent] = useState(null);
   const [viewMode, setViewMode] = useState('list');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -20,45 +21,67 @@ const App = () => {
 
   const fetchFiles = (path = '') => {
     setLoading(true);
+    setError(null);
     setViewMode('list');
     const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
     fetch(url)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('連線失敗');
+        return res.json();
+      })
       .then(data => {
         setFiles(data);
         setCurrentPath(path);
         localStorage.setItem('explorer-path', path);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((err) => {
+        setError(err.message || '連線失敗');
+        setLoading(false);
+      });
   };
 
   const fetchFileContent = (file) => {
     const path = currentPath ? `${currentPath}/${file.name}` : file.name;
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
     setSelectedFile(file);
+    setError(null);
     if (isImg) {
       setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
       setViewMode('viewer');
     } else {
       fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
-        .then(res => res.text())
+        .then(res => {
+          if (!res.ok) throw new Error('連線失敗');
+          return res.text();
+        })
         .then(text => {
           setFileContent(text);
           setViewMode('viewer');
+        })
+        .catch((err) => {
+          setError(err.message || '連線失敗');
         });
     }
   };
 
   useEffect(() => {
     fetch('/explorer/api/version')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('連線失敗');
+        return res.json();
+      })
       .then(data => {
         if (data.gitSha !== gitSha && gitSha !== 'unknown') {
           throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${data.gitSha})`);
         }
         fetchFiles(currentPath);
+      })
+      .catch((err) => {
+        setError(err.message || '連線失敗');
+        setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const pathSegments = currentPath ? currentPath.split('/') : [];
@@ -102,6 +125,17 @@ const App = () => {
       </header>
 
       <main className="max-w-screen-xl mx-auto">
+        {error && (
+          <div className="mx-2 my-4 p-4 bg-red-50 border border-red-100 rounded-2xl flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+            <span className="text-red-500 font-bold text-lg">⚠️ {error}</span>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-1.5 bg-red-500 text-white rounded-xl font-bold active:scale-95 transition-transform"
+            >
+              重試
+            </button>
+          </div>
+        )}
         {viewMode === 'viewer' ? (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center px-3 py-2 border-b border-orange-100 bg-orange-50/20">
