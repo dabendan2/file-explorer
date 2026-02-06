@@ -56,19 +56,26 @@ if [ -n "$FRONTEND_URL" ]; then
     fi
     echo "✅ Google Drive 連結正常。"
 
+    # 5. 驗證是否誤用 Mock Root (測試沙箱資料)
+    echo "驗證資料來源安全性..."
+    LOCAL_CHECK=$(curl -s "http://localhost:$PORT/explorer/api/files")
+    if echo "$LOCAL_CHECK" | grep -qE "empty_folder|new_folder"; then
+        echo "❌ 錯誤：後端正在讀取測試沙箱 (Mock Root) 資料！請檢查正式環境 .env 設定。"
+        exit 1
+    fi
+    echo "✅ 資料來源驗證通過。"
+
     # 6. 驗證對外服務版本一致性 (偵測 Caddy 目錄不對齊或快取問題)
     echo "驗證對外服務版本一致性..."
-    if [ -n "$FRONTEND_URL" ]; then
-        # 抓取對外 index.html 中的 Git SHA (假設 SHA 會出現在 JS bundle 路徑或內容中)
-        # 這裡改為直接抓取對外 API 的 version (因 index.html 可能沒寫 SHA，但 JS bundle 內容有)
-        # 最準確的是檢查對外 JS 內容是否包含當前 SHA
-        EXTERNAL_VERSION_INFO=$(curl -sf "$EXTERNAL_API_URL/version" || echo '{"gitSha":"failed"}')
-        EXTERNAL_SHA=$(echo "$EXTERNAL_VERSION_INFO" | jq -r '.gitSha')
-        
-        if [ "$EXTERNAL_SHA" != "$REACT_APP_GIT_SHA" ]; then
-            echo "❌ 錯誤：對外服務版本 ($EXTERNAL_SHA) 與剛部署的版本 ($REACT_APP_GIT_SHA) 不一致！"
-            echo "這通常表示 Caddy 服務目錄與 EXPLORER_DEPLOY_TARGET 不對齊，或存在強大快取。"
-            exit 1
-        fi
-        echo "✅ 對外服務版本驗證通過。"
+    EXTERNAL_VERSION_INFO=$(curl -sf "$EXTERNAL_API_URL/version" || echo '{"gitSha":"failed"}')
+    EXTERNAL_SHA=$(echo "$EXTERNAL_VERSION_INFO" | jq -r '.gitSha')
+    
+    if [ "$EXTERNAL_SHA" != "$REACT_APP_GIT_SHA" ]; then
+        echo "❌ 錯誤：對外服務版本 ($EXTERNAL_SHA) 與剛部署的版本 ($REACT_APP_GIT_SHA) 不一致！"
+        echo "這通常表示 Caddy 服務目錄與 EXPLORER_DEPLOY_TARGET 不對齊，或存在強大快取。"
+        exit 1
     fi
+    echo "✅ 對外服務版本驗證通過。"
+fi
+
+echo "Post-check 已完成。"
