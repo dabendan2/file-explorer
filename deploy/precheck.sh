@@ -21,6 +21,9 @@ while read -r val; do
 done <<< "$ENV_VALUES"
 # --- 禁止修改：檢查硬編碼變數結束 ---
 
+# 2.5 確保 build 產物不進入版本控制 (若有誤入則清理)
+git rm -r --cached backend/static/ 2>/dev/null || true
+
 # 3. 執行前端單元測試
 echo "正在執行 Pre-check: 前端單元測試..."
 (cd frontend && CI=true npm test)
