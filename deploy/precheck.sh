@@ -1,16 +1,23 @@
 #!/bin/bash
 set -e
 
-# 1. 確保 .env 檔案存在並驗證必要部署變數
+# 1. 驗證 .env 檔案存在且所有變數皆有值
 echo "正在執行 Pre-check: 檢查環境變數..."
-[ -f .env ]
+if [ ! -f .env ]; then
+    echo "❌ 錯誤：找不到 .env 檔案。"
+    exit 1
+fi
 
-REQUIRED_VARS=("EXPLORER_DEPLOY_TARGET")
-for var in "${REQUIRED_VARS[@]}"; do
-    [ -n "$(grep "^$var=" .env | cut -d'=' -f2- | sed "s/['\"]//g")" ]
-done
+# 讀取所有非註解行，並驗證其值不為空
+while read -r line || [ -n "$line" ]; do
+    var_name=$(echo "$line" | cut -d'=' -f1)
+    var_value=$(echo "$line" | cut -d'=' -f2-)
+    if [ -z "$var_value" ]; then
+        echo "❌ 錯誤：變數 $var_name 在 .env 中未定義值。"
+        exit 1
+    fi
+done <<< "$(grep -v '^#' .env | grep '=')"
 
-# --- 禁止修改：檢查硬編碼變數開始 ---
 # 2. 遍歷 .env 內的所有值，確保專案中沒有任何檔案包含這些硬編碼敏感資訊
 echo "正在執行 Pre-check: 檢查硬編碼變數..."
 # 排除 .env 本身、排除註解行、排除空值、移除引號

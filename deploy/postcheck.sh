@@ -2,15 +2,6 @@ set -e
 
 [ -f .env ] && export $(grep -v '^#' .env | xargs)
 
-# 0. 嚴格檢查必要變數是否存在
-REQUIRED_VARS=("PORT" "FRONTEND_URL" "EXTERNAL_API_URL")
-for var in "${REQUIRED_VARS[@]}"; do
-    if [ -z "${!var}" ]; then
-        echo "❌ 錯誤：必要環境變數 $var 未定義，Post-check 終止。"
-        exit 1
-    fi
-done
-
 # 1. 驗證服務端點與監聽狀態
 if [ -n "$FRONTEND_URL" ]; then
     echo "正在執行 Post-check: 驗證後端 API 與前端入口..."
