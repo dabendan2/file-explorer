@@ -54,8 +54,31 @@ app.get('/explorer/api/content', (req, res) => {
     if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
     if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return res.status(404).json({ error: 'File not found' });
 
-    const content = fs.readFileSync(fullPath, 'utf8');
+    const content = fs.readFileSync(fullPath);
     res.send(content);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: 刪除檔案或目錄
+app.delete('/explorer/api/delete', (req, res) => {
+  try {
+    const filePath = req.query.path;
+    if (!filePath) return res.status(400).json({ error: 'Path required' });
+
+    const fullPath = path.join(MOCK_ROOT, filePath);
+    if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
+    if (fullPath === MOCK_ROOT) return res.status(403).json({ error: 'Cannot delete root' });
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
+
+    const stats = fs.statSync(fullPath);
+    if (stats.isDirectory()) {
+      fs.rmSync(fullPath, { recursive: true, force: true });
+    } else {
+      fs.unlinkSync(fullPath);
+    }
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

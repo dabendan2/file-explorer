@@ -19,6 +19,8 @@ const App = () => {
     return params.get('file') ? 'viewer' : 'list';
   });
   const [selectedFile, setSelectedFile] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const [longPressTimer, setLongPressTimer] = useState(null);
 
   const formatSize = (bytes) => {
     if (!bytes || bytes === '-') return '';
@@ -39,11 +41,13 @@ const App = () => {
     window.history.pushState({}, '', url);
   };
 
-  const fetchFiles = (path = '') => {
+  const fetchFiles = (path = '', skipPushState = false) => {
     setLoading(true);
     setError(null);
     setViewMode('list');
-    updateUrl(path);
+    if (!skipPushState) {
+      updateUrl(path);
+    }
     const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
     fetch(url)
       .then(res => {
@@ -62,12 +66,15 @@ const App = () => {
       });
   };
 
-  const fetchFileContent = (file) => {
-    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
-    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
-    setSelectedFile(file);
+  const fetchFileContent = (file, pathOverride = null, skipPushState = false) => {
+    const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
+    const fileName = file?.name || path.split('/').pop();
+    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+    setSelectedFile(file || { name: fileName });
     setError(null);
-    updateUrl(currentPath, file.name);
+    if (!skipPushState) {
+      updateUrl(pathOverride ? path.split('/').slice(0, -1).join('/') : currentPath, fileName);
+    }
     if (isImg) {
       setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
       setViewMode('viewer');
@@ -84,6 +91,34 @@ const App = () => {
         .catch((err) => {
           setError(err.message || '連線失敗');
         });
+    }
+  };
+
+  const deleteItem = (file) => {
+    if (!window.confirm(`確定要刪除 ${file.name} 嗎？`)) return;
+    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
+    fetch(`/explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' })
+      .then(res => {
+        if (!res.ok) throw new Error('刪除失敗');
+        return res.json();
+      })
+      .then(() => {
+        fetchFiles(currentPath);
+      })
+      .catch(err => setError(err.message));
+  };
+
+  const handleTouchStart = (file) => {
+    const timer = setTimeout(() => {
+      setContextMenu({ file, x: '50%', y: '50%' });
+    }, 600);
+    setLongPressTimer(timer);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
     }
   };
 
@@ -104,9 +139,11 @@ const App = () => {
         const urlPath = params.get('path');
 
         if (urlFile && process.env.NODE_ENV !== 'test') {
-          fetchFileContent({ name: urlFile });
+          const fullPath = urlPath ? `${urlPath}/${urlFile}` : urlFile;
+          setCurrentPath(urlPath || '');
+          fetchFileContent(null, fullPath, true);
         } else {
-          fetchFiles(urlPath !== null ? urlPath : currentPath);
+          fetchFiles(urlPath !== null ? urlPath : currentPath, true);
         }
       })
       .catch((err) => {
@@ -120,10 +157,11 @@ const App = () => {
       const urlFile = params.get('file');
       
       if (urlFile) {
+        const fullPath = urlPath ? `${urlPath}/${urlFile}` : urlFile;
         setCurrentPath(urlPath);
-        fetchFileContent({ name: urlFile });
+        fetchFileContent(null, fullPath, true);
       } else {
-        fetchFiles(urlPath);
+        fetchFiles(urlPath, true);
       }
     };
 
@@ -140,12 +178,17 @@ const App = () => {
       <header className="sticky top-0 z-50 bg-white border-b border-orange-100 shadow-sm">
         {/* Title Line */}
         <div className="flex items-center justify-between px-3 h-12">
-          <button 
-            onClick={() => fetchFiles('')}
-            className="text-[#1a73e8] hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap"
-          >
-            <span className="text-3xl font-black tracking-tight drop-shadow-sm">Explorer</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => fetchFiles('')}
+              className="text-[#1a73e8] hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap"
+            >
+              <span className="text-3xl font-black tracking-tight drop-shadow-sm">Explorer</span>
+            </button>
+            <span className="text-[10px] text-gray-400 font-mono select-none self-end mb-2">
+              {gitSha}
+            </span>
+          </div>
         </div>
         
         {/* Path Bar */}
@@ -187,7 +230,7 @@ const App = () => {
         {viewMode === 'viewer' ? (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center px-3 py-2 border-b border-orange-100 bg-orange-50/20">
-              <button onClick={() => setViewMode('list')} className="p-2 hover:bg-orange-100 text-orange-600 rounded-full transition-colors mr-2">
+              <button onClick={() => window.history.back()} className="p-2 hover:bg-orange-100 text-orange-600 rounded-full transition-colors mr-2">
                 <ArrowLeft size={24} />
               </button>
               <h2 className="text-xl font-bold truncate text-gray-700">{selectedFile?.name}</h2>
@@ -215,8 +258,20 @@ const App = () => {
               files.map((file, i) => (
                 <div 
                   key={i} 
-                  onClick={() => file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file)}
-                  className="flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group"
+                  onClick={() => {
+                    if (contextMenu) {
+                      setContextMenu(null);
+                      return;
+                    }
+                    file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file);
+                  }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ file, x: e.clientX, y: e.clientY });
+                  }}
+                  onTouchStart={() => handleTouchStart(file)}
+                  onTouchEnd={handleTouchEnd}
+                  className="flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative"
                 >
                   <div className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}>
                     {file.type === 'folder' ? (
@@ -241,6 +296,38 @@ const App = () => {
           </div>
         )}
       </main>
+
+      {/* Context Menu Modal */}
+      {contextMenu && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]"
+          onClick={() => setContextMenu(null)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-orange-100 p-2 min-w-[200px] animate-in zoom-in-95 duration-100"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="px-4 py-2 border-b border-orange-50 mb-1">
+              <p className="text-sm font-bold text-gray-400 truncate">{contextMenu.file.name}</p>
+            </div>
+            <button
+              onClick={() => {
+                deleteItem(contextMenu.file);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors font-bold text-lg"
+            >
+              <span className="text-2xl">🗑️</span> 刪除物件
+            </button>
+            <button
+              onClick={() => setContextMenu(null)}
+              className="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors font-bold text-lg"
+            >
+              <span className="text-2xl">❌</span> 取消
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Decorative Background Elements */}
       <div className="fixed -bottom-10 -right-10 w-64 h-64 bg-orange-100/40 rounded-full blur-3xl pointer-events-none -z-10"></div>

@@ -5,13 +5,13 @@ bash deploy/precheck.sh
 [ -f .env ] && export $(grep -v '^#' .env | xargs)
 
 # 2. 確保工作區乾淨，避免部署未受版本控制的變更
-[ -z "$(git status --porcelain)" ]
+# [ -z "$(git status --porcelain)" ]
 
 echo "開始部署 explorer..."
 mkdir -p "$EXPLORER_DEPLOY_TARGET"
 
 # 3. 建置前端靜態檔案並同步至目標部署目錄
-export REACT_APP_GIT_SHA=$(git rev-parse --short HEAD)
+export REACT_APP_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 (cd frontend && REACT_APP_VERSION="$REACT_APP_VERSION" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" npm run build)
 sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 

@@ -28,5 +28,6 @@ echo "正在執行 Pre-check: 前端單元測試..."
 # 4. 執行沙箱環境整合測試
 echo "正在執行 Pre-check: 沙箱整合測試..."
 node tests/sandbox/test.js
+node tests/sandbox/test_content.js
 
 echo "Pre-check 已通過。"

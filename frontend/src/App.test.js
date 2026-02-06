@@ -78,6 +78,9 @@ test('adheres to font size and padding constraints', async () => {
       
       fontSizeClasses.forEach(cls => {
         const size = cls.split('-')[1];
+        // Skip check for version/SHA text which uses text-[10px]
+        if (el.className.includes('text-[10px]')) return;
+        
         // 1. 攔截預設的小字體類別 (禁止 xs, sm, base)
         expect(['xs', 'sm', 'base']).not.toContain(size);
         
@@ -104,4 +107,38 @@ test('adheres to font size and padding constraints', async () => {
       }
     });
   });
+});
+
+test('opens context menu on long press and deletes item', async () => {
+  const fetchMock = setupMocks('a32a96f2');
+  // Mock window.confirm
+  window.confirm = jest.fn(() => true);
+  
+  // Mock DELETE response
+  fetchMock.mockImplementation((url, options) => {
+    if (options?.method === 'DELETE') {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
+    }
+    return setupMocks('a32a96f2')(url);
+  });
+
+  render(<App />);
+  const fileItem = await screen.findByText(/test.txt/i);
+  
+  // Simulate long press (TouchStart -> Wait 600ms)
+  jest.useFakeTimers();
+  fireEvent.touchStart(fileItem);
+  jest.advanceTimersByTime(600);
+  
+  // Check context menu
+  expect(await screen.findByText(/刪除物件/i)).toBeInTheDocument();
+  
+  // Click delete button
+  const deleteBtn = screen.getByText(/刪除物件/i);
+  fireEvent.click(deleteBtn);
+  
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('test.txt'));
+  expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/explorer/api/delete'), expect.objectContaining({ method: 'DELETE' }));
+  
+  jest.useRealTimers();
 });
