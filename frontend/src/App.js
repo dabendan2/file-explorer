@@ -156,12 +156,19 @@ const App = () => {
     // Check version and fetch
     fetch('/explorer/api/version')
       .then(res => {
-        if (!res.ok) throw new Error('連線失敗');
+        if (!res.ok) throw new Error('無法獲取後端版本資訊');
         return res.json();
       })
       .then(data => {
-        if (data.gitSha !== gitSha && gitSha !== 'unknown') {
-          console.warn(`Git SHA mismatch: FE(${gitSha}) vs BE(${data.gitSha})`);
+        const beSha = data.gitSha || 'missing';
+        const feSha = gitSha;
+
+        if (beSha === 'unknown' || beSha === 'missing' || feSha === 'unknown') {
+          throw new Error(`版本資訊無效: 前端(${feSha}) | 後端(${beSha})。請重新部署。`);
+        }
+
+        if (beSha !== feSha) {
+          throw new Error(`版本不一致: 前端(${feSha}) != 後端(${beSha})。請清除瀏覽器快取或重新部署。`);
         }
         
         const params = new URLSearchParams(window.location.search);

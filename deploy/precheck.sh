@@ -25,9 +25,9 @@ done <<< "$ENV_VALUES"
 echo "正在執行 Pre-check: 前端單元測試..."
 (cd frontend && CI=true npm test)
 
-# 4. 執行沙箱環境整合測試
+# 4. 執行沙箱環境整合測試 (複寫 EXPLORER_DATA_ROOT 為空以使用 Mock Root)
 echo "正在執行 Pre-check: 沙箱整合測試..."
-node tests/sandbox/test.js
-node tests/sandbox/test_content.js
+EXPLORER_DATA_ROOT="" node tests/sandbox/test.js
+EXPLORER_DATA_ROOT="" node tests/sandbox/test_content.js
 
 echo "Pre-check 已通過。"

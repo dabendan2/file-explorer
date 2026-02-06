@@ -4,16 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config(); // 預設讀取當前工作目錄下的 .env
 
 const app = express();
 
-const MOCK_ROOT = process.env.MOCK_ROOT;
+const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
 
-if (!MOCK_ROOT) {
-  console.error('❌ Error: MOCK_ROOT is not defined in environment variables.');
-  process.exit(1);
-}
+const MOCK_ROOT = EXPLORER_DATA_ROOT; // 保持變數名相容性
 
 // API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
 app.get('/explorer/api/files', (req, res) => {
@@ -27,8 +24,10 @@ app.get('/explorer/api/files', (req, res) => {
         const cmd = subPath 
           ? `gog drive ls --parent "${subPath}" --json --no-input`
           : `gog drive ls --json --no-input`;
-        const output = execSync(cmd, { encoding: 'utf8', env: { ...process.env, GOG_KEYRING_PASSWORD: '123' } });
-        const driveFiles = JSON.parse(output);
+        const output = execSync(cmd, { encoding: 'utf8' });
+        const driveOutput = JSON.parse(output);
+        console.log('Drive Output Type:', typeof driveOutput, 'IsArray:', Array.isArray(driveOutput));
+        const driveFiles = Array.isArray(driveOutput) ? driveOutput : (driveOutput.files || []);
         const mapped = driveFiles.map(f => ({
           name: f.name,
           id: f.id, // Include ID for gdrive
@@ -71,7 +70,8 @@ app.get('/explorer/api/files', (req, res) => {
 // API: 獲取系統版本資訊
 app.get('/explorer/api/version', (req, res) => {
   res.json({
-    gitSha: process.env.REACT_APP_GIT_SHA || 'unknown'
+    gitSha: process.env.REACT_APP_GIT_SHA || 'unknown',
+    dataRoot: EXPLORER_DATA_ROOT
   });
 });
 
@@ -87,7 +87,7 @@ app.get('/explorer/api/content', (req, res) => {
       try {
         // Assume filePath is fileId in google mode
         const cmd = `gog drive download "${filePath}" --stdout --no-input`;
-        const output = execSync(cmd, { env: { ...process.env, GOG_KEYRING_PASSWORD: '123' } });
+        const output = execSync(cmd);
         return res.send(output);
       } catch (err) {
         return res.status(500).json({ error: 'Google Drive download failed: ' + err.message });
