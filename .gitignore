@@ -1,6 +1,5 @@
 backend/static/
-backend/server.log
-backend/test-server.log
-frontend/build/
 node_modules/
 .env
+logs/
+*.log
