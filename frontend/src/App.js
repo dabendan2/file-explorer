@@ -20,6 +20,7 @@ const App = () => {
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [explorerMode, setExplorerMode] = useState('local'); // 'local' or 'google'
+  const [titleClicks, setTitleClicks] = useState(0);
   const [contextMenu, setContextMenu] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [touchStartPos, setTouchStartPos] = useState(null);
@@ -207,6 +208,20 @@ const App = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleTitleClick = () => {
+    const newClicks = titleClicks + 1;
+    if (newClicks >= 7) {
+      const newMode = explorerMode === 'local' ? 'google' : 'local';
+      setExplorerMode(newMode);
+      fetchFiles('', false, newMode);
+      setTitleClicks(0);
+    } else {
+      setTitleClicks(newClicks);
+      // 3秒後重設點擊次數
+      setTimeout(() => setTitleClicks(0), 3000);
+    }
+  };
+
   const pathSegments = currentPath ? currentPath.split('/') : [];
 
   return (
@@ -217,35 +232,14 @@ const App = () => {
         <div className="flex items-center justify-between px-3 h-12">
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => fetchFiles('')}
-              className="text-[#1a73e8] hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap"
+              onClick={handleTitleClick}
+              className={`${explorerMode === 'google' ? 'text-red-600' : 'text-[#1a73e8]'} hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap`}
             >
               <span className="text-3xl font-black tracking-tight drop-shadow-sm">Explorer</span>
             </button>
             <span className="text-[10px] text-gray-400 font-mono select-none self-end mb-2">
               {gitSha}
             </span>
-          </div>
-
-          <div className="flex bg-gray-100 rounded-xl p-1 shadow-inner border border-gray-200">
-            <button
-              onClick={() => {
-                setExplorerMode('local');
-                fetchFiles(currentPath, true, 'local');
-              }}
-              className={`px-3 py-1 rounded-lg font-bold transition-all text-lg ${explorerMode === 'local' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              Local
-            </button>
-            <button
-              onClick={() => {
-                setExplorerMode('google');
-                fetchFiles(currentPath, true, 'google');
-              }}
-              className={`px-3 py-1 rounded-lg font-bold transition-all text-lg ${explorerMode === 'google' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              Google
-            </button>
           </div>
         </div>
         

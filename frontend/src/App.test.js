@@ -60,28 +60,25 @@ test('switches to viewer mode on file click', async () => {
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
 });
 
-test('has a mode switch next to title', async () => {
-  setupMocks('a32a96f2');
+test('switches mode after 7 clicks on title', async () => {
+  const fetchMock = setupMocks('a32a96f2');
   render(<App />);
-  const localMode = await screen.findByText(/Local/i);
-  const googleMode = await screen.findByText(/Google/i);
-  expect(localMode).toBeInTheDocument();
-  expect(googleMode).toBeInTheDocument();
-});
-
-  test('mode switch changes list view', async () => {
-    const fetchMock = setupMocks('a32a96f2');
-    render(<App />);
-    const googleBtn = screen.getByText(/Google/i);
-    
-    fireEvent.click(googleBtn);
-    
-    // Expect fetch to have been called with mode=google
-    await waitFor(() => {
-      const calls = fetchMock.mock.calls.map(c => c[0]);
-      expect(calls.some(url => url.includes('mode=google'))).toBe(true);
-    });
+  const titleBtn = await screen.findByRole('button', { name: /Explorer/i });
+  
+  // Click 7 times
+  for (let i = 0; i < 7; i++) {
+    fireEvent.click(titleBtn);
+  }
+  
+  // Expect fetch to have been called with mode=google
+  await waitFor(() => {
+    const calls = fetchMock.mock.calls.map(c => c[0]);
+    expect(calls.some(url => url.includes('mode=google'))).toBe(true);
   });
+  
+  // Check if title color changed to red (text-red-600)
+  expect(titleBtn).toHaveClass('text-red-600');
+});
 
 test('adheres to font size and padding constraints', async () => {
   setupMocks('a32a96f2');
