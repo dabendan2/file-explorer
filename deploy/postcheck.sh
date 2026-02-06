@@ -28,11 +28,8 @@ if [ -n "$FRONTEND_URL" ]; then
         curl -sf "http://localhost:${PORT:-5000}/explorer/api/version" | grep -q "$REACT_APP_GIT_SHA"
     fi
 
-    # 3. 驗證 UI 版本
-    if [ -n "$REACT_APP_VERSION" ]; then
-        echo "正在驗證 UI 版本: v$REACT_APP_VERSION"
-        curl -sf -L "$FRONTEND_URL" > /dev/null
-    fi
+    # 3. 驗證 UI
+    curl -sf -L "$FRONTEND_URL" > /dev/null
 fi
 
 echo "Post-check 已完成。"

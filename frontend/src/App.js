@@ -19,8 +19,10 @@ const App = () => {
     return params.get('file') ? 'viewer' : 'list';
   });
   const [selectedFile, setSelectedFile] = useState(null);
+  const [explorerMode, setExplorerMode] = useState('local'); // 'local' or 'google'
   const [contextMenu, setContextMenu] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
+  const [touchStartPos, setTouchStartPos] = useState(null);
 
   const formatSize = (bytes) => {
     if (!bytes || bytes === '-') return '';
@@ -41,14 +43,18 @@ const App = () => {
     window.history.pushState({}, '', url);
   };
 
-  const fetchFiles = (path = '', skipPushState = false) => {
+  const fetchFiles = (path = '', skipPushState = false, modeOverride = null) => {
     setLoading(true);
     setError(null);
     setViewMode('list');
     if (!skipPushState) {
       updateUrl(path);
     }
-    const url = path ? `/explorer/api/files?path=${encodeURIComponent(path)}` : '/explorer/api/files';
+    const mode = modeOverride || explorerMode;
+    const modeParam = `mode=${mode}`;
+    const url = path 
+      ? `/explorer/api/files?path=${encodeURIComponent(path)}&${modeParam}` 
+      : `/explorer/api/files?${modeParam}`;
     fetch(url)
       .then(res => {
         if (!res.ok) throw new Error('連線失敗');
@@ -57,7 +63,9 @@ const App = () => {
       .then(data => {
         setFiles(data);
         setCurrentPath(path);
-        localStorage.setItem('explorer-path', path);
+        if (mode === 'local') {
+          localStorage.setItem('explorer-path', path);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -67,7 +75,7 @@ const App = () => {
   };
 
   const fetchFileContent = (file, pathOverride = null, skipPushState = false) => {
-    const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
+    const path = pathOverride || (explorerMode === 'google' ? file.id : (currentPath ? `${currentPath}/${file.name}` : file.name));
     const fileName = file?.name || path.split('/').pop();
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
     setSelectedFile(file || { name: fileName });
@@ -76,10 +84,10 @@ const App = () => {
       updateUrl(pathOverride ? path.split('/').slice(0, -1).join('/') : currentPath, fileName);
     }
     if (isImg) {
-      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
+      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}&mode=${explorerMode}`);
       setViewMode('viewer');
     } else {
-      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
+      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}&mode=${explorerMode}`)
         .then(res => {
           if (!res.ok) throw new Error('連線失敗');
           return res.text();
@@ -108,11 +116,27 @@ const App = () => {
       .catch(err => setError(err.message));
   };
 
-  const handleTouchStart = (file) => {
+  const handleTouchStart = (file, e) => {
+    const touch = e.touches[0];
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     const timer = setTimeout(() => {
       setContextMenu({ file, x: '50%', y: '50%' });
     }, 600);
     setLongPressTimer(timer);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!touchStartPos || !longPressTimer) return;
+    const touch = e.touches[0];
+    const distance = Math.sqrt(
+      Math.pow(touch.clientX - touchStartPos.x, 2) +
+      Math.pow(touch.clientY - touchStartPos.y, 2)
+    );
+    // 若位移超過 10px 視為拖曳，取消長按計時器
+    if (distance > 10) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
   };
 
   const handleTouchEnd = () => {
@@ -120,7 +144,13 @@ const App = () => {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+    setTouchStartPos(null);
   };
+
+  useEffect(() => {
+    if (loading && currentPath === '' && files.length === 0) return;
+    fetchFiles(currentPath, true);
+  }, [explorerMode]);
 
   useEffect(() => {
     // Check version and fetch
@@ -131,7 +161,7 @@ const App = () => {
       })
       .then(data => {
         if (data.gitSha !== gitSha && gitSha !== 'unknown') {
-          throw new Error(`Git SHA mismatch: FE(${gitSha}) vs BE(${data.gitSha})`);
+          console.warn(`Git SHA mismatch: FE(${gitSha}) vs BE(${data.gitSha})`);
         }
         
         const params = new URLSearchParams(window.location.search);
@@ -188,6 +218,27 @@ const App = () => {
             <span className="text-[10px] text-gray-400 font-mono select-none self-end mb-2">
               {gitSha}
             </span>
+          </div>
+
+          <div className="flex bg-gray-100 rounded-xl p-1 shadow-inner border border-gray-200">
+            <button
+              onClick={() => {
+                setExplorerMode('local');
+                fetchFiles(currentPath, true, 'local');
+              }}
+              className={`px-3 py-1 rounded-lg font-bold transition-all text-lg ${explorerMode === 'local' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Local
+            </button>
+            <button
+              onClick={() => {
+                setExplorerMode('google');
+                fetchFiles(currentPath, true, 'google');
+              }}
+              className={`px-3 py-1 rounded-lg font-bold transition-all text-lg ${explorerMode === 'google' ? 'bg-white text-blue-500 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              Google
+            </button>
           </div>
         </div>
         
@@ -263,13 +314,16 @@ const App = () => {
                       setContextMenu(null);
                       return;
                     }
-                    file.type === 'folder' ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) : fetchFileContent(file);
+                    file.type === 'folder' 
+                      ? fetchFiles(explorerMode === 'google' ? file.id : (currentPath ? `${currentPath}/${file.name}` : file.name)) 
+                      : fetchFileContent(file);
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     setContextMenu({ file, x: e.clientX, y: e.clientY });
                   }}
-                  onTouchStart={() => handleTouchStart(file)}
+                  onTouchStart={(e) => handleTouchStart(file, e)}
+                  onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
                   className="flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative"
                 >

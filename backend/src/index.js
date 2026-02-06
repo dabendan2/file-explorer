@@ -2,14 +2,46 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
 const app = express();
 
-const MOCK_ROOT = process.env.MOCK_ROOT || '/home/ubuntu/.openclaw/workspace';
+const MOCK_ROOT = process.env.MOCK_ROOT;
+
+if (!MOCK_ROOT) {
+  console.error('❌ Error: MOCK_ROOT is not defined in environment variables.');
+  process.exit(1);
+}
 
 // API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
 app.get('/explorer/api/files', (req, res) => {
   try {
     const subPath = req.query.path || '';
+    const explorerMode = req.query.mode || 'local';
+    
+    if (explorerMode === 'google') {
+      const { execSync } = require('child_process');
+      try {
+        const cmd = subPath 
+          ? `gog drive ls --parent "${subPath}" --json --no-input`
+          : `gog drive ls --json --no-input`;
+        const output = execSync(cmd, { encoding: 'utf8', env: { ...process.env, GOG_KEYRING_PASSWORD: '123' } });
+        const driveFiles = JSON.parse(output);
+        const mapped = driveFiles.map(f => ({
+          name: f.name,
+          id: f.id, // Include ID for gdrive
+          type: f.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file',
+          size: f.size || '-',
+          modified: f.modifiedTime ? f.modifiedTime.split('T')[0] : '-'
+        }));
+        return res.json(mapped);
+      } catch (err) {
+        return res.status(500).json({ error: 'Google Drive access failed: ' + err.message });
+      }
+    }
+
     const fullPath = path.join(MOCK_ROOT, subPath);
 
     // 安全檢查：確保路徑在 MOCK_ROOT 內
@@ -39,7 +71,6 @@ app.get('/explorer/api/files', (req, res) => {
 // API: 獲取系統版本資訊
 app.get('/explorer/api/version', (req, res) => {
   res.json({
-    version: process.env.REACT_APP_VERSION || '1.0.0',
     gitSha: process.env.REACT_APP_GIT_SHA || 'unknown'
   });
 });
@@ -48,8 +79,21 @@ app.get('/explorer/api/version', (req, res) => {
 app.get('/explorer/api/content', (req, res) => {
   try {
     const filePath = req.query.path;
+    const explorerMode = req.query.mode || 'local';
     if (!filePath) return res.status(400).json({ error: 'Path required' });
     
+    if (explorerMode === 'google') {
+      const { execSync } = require('child_process');
+      try {
+        // Assume filePath is fileId in google mode
+        const cmd = `gog drive download "${filePath}" --stdout --no-input`;
+        const output = execSync(cmd, { env: { ...process.env, GOG_KEYRING_PASSWORD: '123' } });
+        return res.send(output);
+      } catch (err) {
+        return res.status(500).json({ error: 'Google Drive download failed: ' + err.message });
+      }
+    }
+
     const fullPath = path.join(MOCK_ROOT, filePath);
     if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
     if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return res.status(404).json({ error: 'File not found' });
