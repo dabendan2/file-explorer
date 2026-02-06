@@ -2,22 +2,31 @@ set -e
 
 [ -f .env ] && export $(grep -v '^#' .env | xargs)
 
+# 0. 嚴格檢查必要變數是否存在
+REQUIRED_VARS=("PORT" "FRONTEND_URL" "EXTERNAL_API_URL")
+for var in "${REQUIRED_VARS[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "❌ 錯誤：必要環境變數 $var 未定義，Post-check 終止。"
+        exit 1
+    fi
+done
+
 # 1. 驗證服務端點與監聽狀態
 if [ -n "$FRONTEND_URL" ]; then
     echo "正在執行 Post-check: 驗證後端 API 與前端入口..."
     # 確認後端埠號已開啟監聽
     for i in {1..5}; do
-        if lsof -Pi :${PORT:-5000} -sTCP:LISTEN -t >/dev/null; then
+        if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; then
             break
         fi
         echo "等待後端服務啟動... ($i/5)"
         sleep 2
     done
-    lsof -Pi :${PORT:-5000} -sTCP:LISTEN -t >/dev/null || (echo "❌ 後端服務未在埠號 ${PORT:-5000} 啟動" && exit 1)
+    lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null || (echo "❌ 後端服務未在埠號 $PORT 啟動" && exit 1)
     
     # 檢查後端本地 API (注意：後端路由現在包含 /explorer/api)
     echo "驗證本地 API..."
-    curl -sf -o /dev/null "http://localhost:${PORT:-5000}/explorer/api/files"
+    curl -sf -o /dev/null "http://localhost:$PORT/explorer/api/files"
     
     # 檢查對外前端域名
     echo "驗證對外前端入口..."
@@ -32,7 +41,7 @@ if [ -n "$FRONTEND_URL" ]; then
     # 2. 驗證後端版本注入與路徑對齊
     if [ -n "$REACT_APP_GIT_SHA" ]; then
         echo "正在驗證後端 Git SHA 與路徑對齊..."
-        VERSION_INFO=$(curl -sf "http://localhost:${PORT:-5000}/explorer/api/version")
+        VERSION_INFO=$(curl -sf "http://localhost:$PORT/explorer/api/version")
         # 檢查 Git SHA
         echo "$VERSION_INFO" | grep -q "$REACT_APP_GIT_SHA"
         # 檢查路徑對齊 (確認後端實際使用的路徑與 .env 一致)
@@ -49,7 +58,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
     # 3. 驗證 Google Drive 連結
     echo "驗證 Google Drive 連結..."
-    GOOGLE_CHECK=$(curl -s "http://localhost:${PORT:-5000}/explorer/api/files?mode=google")
+    GOOGLE_CHECK=$(curl -s "http://localhost:$PORT/explorer/api/files?mode=google")
     if echo "$GOOGLE_CHECK" | grep -q "error"; then
         echo "❌ Google Drive 連結失敗: $GOOGLE_CHECK"
         exit 1
@@ -58,7 +67,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
     # 5. 驗證是否誤用 Mock Root (測試沙箱資料)
     echo "驗證資料來源安全性..."
-    LOCAL_CHECK=$(curl -s "http://localhost:${PORT:-5000}/explorer/api/files")
+    LOCAL_CHECK=$(curl -s "http://localhost:$PORT/explorer/api/files")
     if echo "$LOCAL_CHECK" | grep -qE "empty_folder|new_folder"; then
         echo "❌ 錯誤：後端正在讀取測試沙箱 (Mock Root) 資料！請檢查正式環境 .env 設定。"
         exit 1

@@ -2,9 +2,9 @@ services:
   explorer-backend:
     build: ./backend
     ports:
-      - "${PORT:-5000}:${PORT:-5000}"
+      - "${PORT}:${PORT}"
     environment:
-      - PORT=${PORT:-5000}
+      - PORT=${PORT}
       - MOCK_ROOT=/app/sandbox
     volumes:
       - ./tests/sandbox/mock_root:/app/sandbox
