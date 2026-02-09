@@ -21,14 +21,14 @@ sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 
 # 4. 後端服務更新：清理舊程序、安裝依賴並重啟服務
 echo "正在啟動後端服務..."
-# 機制 2: 強制埠號排他性檢查 (直接根據 PORT 強制刪除佔用者)
+# 優先根據特定埠號清理程序，並使用絕對路徑精確匹配
 if [ -n "$PORT" ]; then
     echo "清理埠號 $PORT 的佔用程序..."
-    sudo lsof -t -i :"$PORT" | xargs -r sudo kill -9
+    lsof -t -i :"$PORT" | xargs -r kill -9
 fi
-pgrep -f "backend/src/index.js" | xargs -r kill -9
+pgrep -f "node $(pwd)/backend/src/index.js" | xargs -r kill -9
 (cd backend && npm install --silent)
-(cd backend && nohup env PORT="$PORT" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" node src/index.js > ../logs/server.log 2>&1 &)
+(cd backend && nohup env PORT="$PORT" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" node "$(pwd)/src/index.js" > ../logs/server.log 2>&1 &)
 sleep 3
 
 # 5. 執行部署後端點與狀態驗證
