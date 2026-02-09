@@ -4,24 +4,39 @@ set -e
 
 # 1. 驗證服務端點與監聽狀態
 if [ -n "$FRONTEND_URL" ]; then
-    echo "正在執行 Post-check: 驗證後端 API 與前端入口..."
-    # 確認後端埠號已開啟監聽
-    for i in {1..5}; do
-        if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; then
-            break
-        fi
-        echo "等待後端服務啟動... ($i/5)"
-        sleep 2
-    done
-    lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null || (echo "❌ 後端服務未在埠號 $PORT 啟動" && exit 1)
+    echo "正在執行 Post-check: 驗證服務狀態 (機制 4: 多次重複探針)..."
     
-    # 檢查後端本地 API (注意：後端路由現在包含 /explorer/api)
-    echo "驗證本地 API..."
-    curl -sf -o /dev/null "http://localhost:$PORT/explorer/api/files"
-    
-    # 檢查對外前端域名
-    echo "驗證對外前端入口..."
-    curl -sf -o /dev/null "$FRONTEND_URL"
+    # 定義驗證函數
+    verify_endpoint() {
+        local url=$1
+        local name=$2
+        local success_count=0
+        local required_successes=3
+        local max_attempts=10
+
+        echo "開始驗證 $name ($url)..."
+        for ((i=1; i<=max_attempts; i++)); do
+            if curl -sf -o /dev/null "$url"; then
+                ((success_count++))
+                echo "  [嘗試 $i] ✅ 成功 ($success_count/$required_successes)"
+                if [ "$success_count" -ge "$required_successes" ]; then
+                    return 0
+                fi
+            else
+                echo "  [嘗試 $i] ❌ 失敗 (重置計數)"
+                success_count=0
+            fi
+            sleep 2
+        done
+        return 1
+    }
+
+    # 執行埠號監聽基本檢查
+    lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null || (echo "❌ 服務未在埠號 $PORT 啟動" && exit 1)
+
+    # 執行多次探針驗證
+    verify_endpoint "http://localhost:$PORT/explorer/api/files" "本地 API" || exit 1
+    verify_endpoint "$FRONTEND_URL" "對外前端入口" || exit 1
 
     # 檢查對外 API 路由
     if [ -n "$EXTERNAL_API_URL" ]; then
