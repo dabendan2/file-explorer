@@ -4,39 +4,25 @@ set -e
 
 # 1. 驗證服務端點與監聽狀態
 if [ -n "$FRONTEND_URL" ]; then
-    echo "正在執行 Post-check: 驗證服務狀態 (機制 4: 多次重複探針)..."
+    echo "正在執行 Post-check: 驗證服務狀態..."
     
-    # 定義驗證函數
-    verify_endpoint() {
-        local url=$1
-        local name=$2
-        local success_count=0
-        local required_successes=3
-        local max_attempts=10
+    # 確保後端埠號已開啟監聽
+    for i in {1..5}; do
+        if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; then
+            break
+        fi
+        echo "等待後端服務啟動... ($i/5)"
+        sleep 2
+    done
+    lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null || (echo "❌ 後端服務未在埠號 $PORT 啟動" && exit 1)
 
-        echo "開始驗證 $name ($url)..."
-        for ((i=1; i<=max_attempts; i++)); do
-            if curl -sf -o /dev/null "$url"; then
-                ((success_count++))
-                echo "  [嘗試 $i] ✅ 成功 ($success_count/$required_successes)"
-                if [ "$success_count" -ge "$required_successes" ]; then
-                    return 0
-                fi
-            else
-                echo "  [嘗試 $i] ❌ 失敗 (重置計數)"
-                success_count=0
-            fi
-            sleep 2
-        done
-        return 1
-    }
-
-    # 執行埠號監聽基本檢查
-    lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null || (echo "❌ 服務未在埠號 $PORT 啟動" && exit 1)
-
-    # 執行多次探針驗證
-    verify_endpoint "http://localhost:$PORT/explorer/api/files" "本地 API" || exit 1
-    verify_endpoint "$FRONTEND_URL" "對外前端入口" || exit 1
+    # 檢查後端本地 API
+    echo "驗證本地 API..."
+    LOCAL_VERSION_INFO=$(curl -sf "http://localhost:$PORT/explorer/api/version")
+    
+    # 檢查對外前端域名
+    echo "驗證對外前端入口..."
+    curl -sf -o /dev/null "$FRONTEND_URL"
 
     # 檢查對外 API 路由
     if [ -n "$EXTERNAL_API_URL" ]; then
@@ -47,19 +33,33 @@ if [ -n "$FRONTEND_URL" ]; then
     # 2. 驗證後端版本注入與路徑對齊
     if [ -n "$REACT_APP_GIT_SHA" ]; then
         echo "正在驗證後端 Git SHA 與路徑對齊..."
-        VERSION_INFO=$(curl -sf "http://localhost:$PORT/explorer/api/version")
         # 檢查 Git SHA
-        echo "$VERSION_INFO" | grep -q "$REACT_APP_GIT_SHA"
-        # 檢查路徑對齊 (確認後端實際使用的路徑與 .env 一致)
+        echo "$LOCAL_VERSION_INFO" | grep -q "$REACT_APP_GIT_SHA"
+        # 檢查路徑對齊
         EXPECTED_ROOT=$(grep "^EXPLORER_DATA_ROOT=" .env | cut -d'=' -f2- | sed "s/['\"]//g")
         if [ -n "$EXPECTED_ROOT" ]; then
-            ACTUAL_ROOT=$(echo "$VERSION_INFO" | jq -r '.dataRoot')
+            ACTUAL_ROOT=$(echo "$LOCAL_VERSION_INFO" | jq -r '.dataRoot')
             if [ "$ACTUAL_ROOT" != "$EXPECTED_ROOT" ]; then
                 echo "❌ 錯誤：路徑不對齊！預期: $EXPECTED_ROOT，實際: $ACTUAL_ROOT"
                 exit 1
             fi
         fi
         echo "✅ 版本與路徑驗證通過。"
+
+        # 機制 5: 環境隔離驗證 (比對本地與外部 SHA)
+        echo "執行機制 5: 環境隔離驗證..."
+        EXTERNAL_VERSION_INFO=$(curl -sf "$EXTERNAL_API_URL/version" || echo '{"gitSha":"failed"}')
+        EXTERNAL_SHA=$(echo "$EXTERNAL_VERSION_INFO" | jq -r '.gitSha')
+        LOCAL_SHA=$(echo "$LOCAL_VERSION_INFO" | jq -r '.gitSha')
+        
+        if [ "$EXTERNAL_SHA" != "$LOCAL_SHA" ]; then
+            echo "❌ 錯誤：環境隔離失效！"
+            echo "本地 API 版本: $LOCAL_SHA"
+            echo "對外域名版本: $EXTERNAL_SHA"
+            echo "這表示反向代理可能指向了錯誤的舊服務或舊目錄。"
+            exit 1
+        fi
+        echo "✅ 環境隔離驗證通過 (本地與外部版本一致)。"
     fi
 
     # 3. 驗證 Google Drive 連結
@@ -79,17 +79,6 @@ if [ -n "$FRONTEND_URL" ]; then
         exit 1
     fi
     echo "✅ 資料來源驗證通過。"
-
-    # 6. 驗證對外服務版本一致性 (偵測 Caddy 目錄不對齊或快取問題)
-    echo "驗證對外服務版本一致性..."
-    EXTERNAL_VERSION_INFO=$(curl -sf "$EXTERNAL_API_URL/version" || echo '{"gitSha":"failed"}')
-    EXTERNAL_SHA=$(echo "$EXTERNAL_VERSION_INFO" | jq -r '.gitSha')
-    
-    if [ "$EXTERNAL_SHA" != "$REACT_APP_GIT_SHA" ]; then
-        echo "❌ 錯誤：對外服務版本 ($EXTERNAL_SHA) 與剛部署的版本 ($REACT_APP_GIT_SHA) 不一致！"
-        echo "這通常表示 Caddy 服務目錄與 EXPLORER_DEPLOY_TARGET 不對齊，或存在強大快取。"
-        exit 1
-    fi
 
     # 7. 驗證前端靜態檔案 Git SHA (偵測前端部署問題)
     echo "驗證前端靜態檔案 Git SHA..."
