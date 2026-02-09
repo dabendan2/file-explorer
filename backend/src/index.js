@@ -16,30 +16,6 @@ const MOCK_ROOT = EXPLORER_DATA_ROOT; // 保持變數名相容性
 app.get('/explorer/api/files', (req, res) => {
   try {
     const subPath = req.query.path || '';
-    const explorerMode = req.query.mode || 'local';
-    
-    if (explorerMode === 'google') {
-      const { execSync } = require('child_process');
-      try {
-        const cmd = subPath 
-          ? `gog drive ls --parent "${subPath}" --json --no-input`
-          : `gog drive ls --json --no-input`;
-        const output = execSync(cmd, { encoding: 'utf8' });
-        const driveOutput = JSON.parse(output);
-        console.log('Drive Output Type:', typeof driveOutput, 'IsArray:', Array.isArray(driveOutput));
-        const driveFiles = Array.isArray(driveOutput) ? driveOutput : (driveOutput.files || []);
-        const mapped = driveFiles.map(f => ({
-          name: f.name,
-          id: f.id, // Include ID for gdrive
-          type: f.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file',
-          size: f.size || '-',
-          modified: f.modifiedTime ? f.modifiedTime.split('T')[0] : '-'
-        }));
-        return res.json(mapped);
-      } catch (err) {
-        return res.status(500).json({ error: 'Google Drive access failed: ' + err.message });
-      }
-    }
 
     const fullPath = path.join(MOCK_ROOT, subPath);
 
@@ -79,21 +55,8 @@ app.get('/explorer/api/version', (req, res) => {
 app.get('/explorer/api/content', (req, res) => {
   try {
     const filePath = req.query.path;
-    const explorerMode = req.query.mode || 'local';
     if (!filePath) return res.status(400).json({ error: 'Path required' });
     
-    if (explorerMode === 'google') {
-      const { execSync } = require('child_process');
-      try {
-        // Assume filePath is fileId in google mode
-        const cmd = `gog drive download "${filePath}" --stdout --no-input`;
-        const output = execSync(cmd);
-        return res.send(output);
-      } catch (err) {
-        return res.status(500).json({ error: 'Google Drive download failed: ' + err.message });
-      }
-    }
-
     const fullPath = path.join(MOCK_ROOT, filePath);
     if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
     if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return res.status(404).json({ error: 'File not found' });

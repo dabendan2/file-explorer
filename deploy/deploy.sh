@@ -26,9 +26,10 @@ if [ -n "$PORT" ]; then
     echo "清理埠號 $PORT 的佔用程序..."
     lsof -t -i :"$PORT" | xargs -r kill -9
 fi
-pgrep -f "node $(pwd)/backend/src/index.js" | xargs -r kill -9
+pgrep -f "node.*backend/src/index.js" | xargs -r kill -9
 (cd backend && npm install --silent)
-(cd backend && nohup env PORT="$PORT" REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" node "$(pwd)/src/index.js" > ../logs/server.log 2>&1 &)
+# 強制在 backend 目錄啟動以確保 dotenv 能讀取到 .env 軟連結
+(cd backend && nohup node src/index.js >> ../backend.log 2>&1 &)
 sleep 3
 
 # 5. 執行部署後端點與狀態驗證

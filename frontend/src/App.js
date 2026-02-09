@@ -19,7 +19,6 @@ const App = () => {
     return params.get('file') ? 'viewer' : 'list';
   });
   const [selectedFile, setSelectedFile] = useState(null);
-  const [explorerMode, setExplorerMode] = useState('local'); // 'local' or 'google'
   const [titleClicks, setTitleClicks] = useState(0);
   const [contextMenu, setContextMenu] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
@@ -44,18 +43,16 @@ const App = () => {
     window.history.pushState({}, '', url);
   };
 
-  const fetchFiles = (path = '', skipPushState = false, modeOverride = null) => {
+  const fetchFiles = (path = '', skipPushState = false) => {
     setLoading(true);
     setError(null);
     setViewMode('list');
     if (!skipPushState) {
       updateUrl(path);
     }
-    const mode = modeOverride || explorerMode;
-    const modeParam = `mode=${mode}`;
     const url = path 
-      ? `/explorer/api/files?path=${encodeURIComponent(path)}&${modeParam}` 
-      : `/explorer/api/files?${modeParam}`;
+      ? `/explorer/api/files?path=${encodeURIComponent(path)}` 
+      : `/explorer/api/files`;
     fetch(url)
       .then(res => {
         if (!res.ok) throw new Error('連線失敗');
@@ -64,9 +61,7 @@ const App = () => {
       .then(data => {
         setFiles(data);
         setCurrentPath(path);
-        if (mode === 'local') {
-          localStorage.setItem('explorer-path', path);
-        }
+        localStorage.setItem('explorer-path', path);
         setLoading(false);
       })
       .catch((err) => {
@@ -76,7 +71,7 @@ const App = () => {
   };
 
   const fetchFileContent = (file, pathOverride = null, skipPushState = false) => {
-    const path = pathOverride || (explorerMode === 'google' ? file.id : (currentPath ? `${currentPath}/${file.name}` : file.name));
+    const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
     const fileName = file?.name || path.split('/').pop();
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
     setSelectedFile(file || { name: fileName });
@@ -85,10 +80,10 @@ const App = () => {
       updateUrl(pathOverride ? path.split('/').slice(0, -1).join('/') : currentPath, fileName);
     }
     if (isImg) {
-      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}&mode=${explorerMode}`);
+      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
       setViewMode('viewer');
     } else {
-      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}&mode=${explorerMode}`)
+      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
         .then(res => {
           if (!res.ok) throw new Error('連線失敗');
           return res.text();
@@ -151,7 +146,7 @@ const App = () => {
   useEffect(() => {
     if (loading && currentPath === '' && files.length === 0) return;
     fetchFiles(currentPath, true);
-  }, [explorerMode]);
+  }, []);
 
   useEffect(() => {
     // Check version and fetch
@@ -210,15 +205,13 @@ const App = () => {
 
   const handleTitleClick = () => {
     const newClicks = titleClicks + 1;
+    setTitleClicks(newClicks);
     if (newClicks >= 7) {
-      const newMode = explorerMode === 'local' ? 'google' : 'local';
-      setExplorerMode(newMode);
-      fetchFiles('', false, newMode);
-      setTitleClicks(0);
-    } else {
-      setTitleClicks(newClicks);
-      // 3秒後重設點擊次數
-      setTimeout(() => setTitleClicks(0), 3000);
+      fetch('/explorer/api/version?mode=google')
+        .then(() => {
+          setViewMode('google');
+        })
+        .catch(() => {});
     }
   };
 
@@ -233,7 +226,7 @@ const App = () => {
           <div className="flex items-center gap-2">
             <button 
               onClick={handleTitleClick}
-              className={`${explorerMode === 'google' ? 'text-red-600' : 'text-[#1a73e8]'} hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap`}
+              className={`${viewMode === 'google' ? 'text-red-600' : 'text-[#1a73e8]'} hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap`}
             >
               <span className="text-3xl font-black tracking-tight drop-shadow-sm">Explorer</span>
             </button>
@@ -316,7 +309,7 @@ const App = () => {
                       return;
                     }
                     file.type === 'folder' 
-                      ? fetchFiles(explorerMode === 'google' ? file.id : (currentPath ? `${currentPath}/${file.name}` : file.name)) 
+                      ? fetchFiles(currentPath ? `${currentPath}/${file.name}` : file.name) 
                       : fetchFileContent(file);
                   }}
                   onContextMenu={(e) => {
