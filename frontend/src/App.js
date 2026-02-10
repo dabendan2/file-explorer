@@ -25,6 +25,32 @@ const App = () => {
   const [touchStartPos, setTouchStartPos] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [renamingFile, setRenamingFile] = useState(null);
+  const [newName, setNewName] = useState('');
+
+  const renameFile = (file) => {
+    if (!newName || newName === file.name) {
+      setRenamingFile(null);
+      return;
+    }
+    const oldPath = currentPath ? `${currentPath}/${file.name}` : file.name;
+    const newPath = currentPath ? `${currentPath}/${newName}` : newName;
+    
+    fetch(`/explorer/api/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ oldPath, newPath })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('重命名失敗');
+      return res.json();
+    })
+    .then(() => {
+      setRenamingFile(null);
+      fetchFiles(currentPath);
+    })
+    .catch(err => setError(err.message));
+  };
 
   const toggleFileSelection = (fileName) => {
     setSelectedFiles(prev => {
@@ -172,12 +198,17 @@ const App = () => {
       .catch(err => setError(err.message));
   };
 
-  const handleTouchStart = (file, e) => {
+  const handleTouchStart = (file, e, isText = false) => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     const timer = setTimeout(() => {
-      setIsSelectionMode(true);
-      setSelectedFiles([file.name]);
+      if (isText) {
+        setRenamingFile(file);
+        setNewName(file.name);
+      } else {
+        setIsSelectionMode(true);
+        setSelectedFiles([file.name]);
+      }
     }, 600);
     setLongPressTimer(timer);
   };
@@ -417,9 +448,6 @@ const App = () => {
                       setSelectedFiles([file.name]);
                     }
                   }}
-                  onTouchStart={(e) => handleTouchStart(file, e)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
                   className={`flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative ${selectedFiles.includes(file.name) ? 'bg-blue-50/50' : ''}`}
                 >
                   {isSelectionMode && (
@@ -432,7 +460,12 @@ const App = () => {
                       />
                     </div>
                   )}
-                  <div className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                  <div 
+                    className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}
+                    onTouchStart={(e) => handleTouchStart(file, e, false)}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
                     {file.type === 'folder' ? (
                       <Folder size={20} className="text-amber-500 fill-amber-200" />
                     ) : (
@@ -444,7 +477,27 @@ const App = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-lg text-gray-800 font-semibold truncate block leading-tight">{file.name}</span>
+                    {renamingFile?.name === file.name ? (
+                      <input
+                        autoFocus
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onBlur={() => renameFile(file)}
+                        onKeyDown={(e) => e.key === 'Enter' && renameFile(file)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full bg-white border-2 border-blue-400 rounded px-1 text-lg font-semibold"
+                      />
+                    ) : (
+                      <span 
+                        className="text-lg text-gray-800 font-semibold truncate block leading-tight"
+                        onTouchStart={(e) => {
+                          e.stopPropagation();
+                          handleTouchStart(file, e, true);
+                        }}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                      >{file.name}</span>
+                    )}
                   </div>
                   {file.type === 'file' && (
                     <div className="text-lg text-orange-300 font-medium ml-4 shrink-0 font-mono">

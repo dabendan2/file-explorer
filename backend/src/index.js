@@ -7,6 +7,7 @@ const dotenv = require('dotenv');
 dotenv.config(); // 預設讀取當前工作目錄下的 .env
 
 const app = express();
+app.use(express.json());
 
 const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
 
@@ -85,6 +86,29 @@ app.delete('/explorer/api/delete', (req, res) => {
     } else {
       fs.unlinkSync(fullPath);
     }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// API: 重命名
+app.post('/explorer/api/rename', (req, res) => {
+  try {
+    const { oldPath, newPath } = req.body;
+    if (!oldPath || !newPath) return res.status(400).json({ error: 'Paths required' });
+
+    const oldFullPath = path.join(MOCK_ROOT, oldPath);
+    const newFullPath = path.join(MOCK_ROOT, newPath);
+
+    if (!oldFullPath.startsWith(MOCK_ROOT) || !newFullPath.startsWith(MOCK_ROOT)) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    if (!fs.existsSync(oldFullPath)) return res.status(404).json({ error: 'Source not found' });
+    if (fs.existsSync(newFullPath)) return res.status(400).json({ error: 'Target already exists' });
+
+    fs.renameSync(oldFullPath, newFullPath);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

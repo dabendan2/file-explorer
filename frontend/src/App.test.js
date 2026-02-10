@@ -56,7 +56,9 @@ test('switches to viewer mode on file click', async () => {
   setupMocks('a32a96f2');
   render(<App />);
   const fileItem = await screen.findByText(/test.txt/i);
-  fireEvent.click(fileItem);
+  // Click on the icon/container part, not the text to avoid rename
+  const container = fileItem.closest('div').parentElement;
+  fireEvent.click(container);
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
 });
 
@@ -142,11 +144,13 @@ test('activates multi-select on long press and deletes item', async () => {
 
   render(<App />);
   const fileItem = await screen.findByText(/test.txt/i);
+  const container = fileItem.closest('div').parentElement;
+  const icon = container.querySelector('div'); // The icon div has the selection onTouchStart
   
-  // Simulate long press (TouchStart -> Wait 600ms)
+  // Simulate long press on icon
   jest.useFakeTimers();
-  fireEvent.touchStart(fileItem, { touches: [{ clientX: 100, clientY: 100 }] });
-  jest.advanceTimersByTime(600);
+  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
+  jest.advanceTimersByTime(650);
   
   // Check selection mode toolbar
   expect(await screen.findByText(/已選取 1 個/i)).toBeInTheDocument();
@@ -167,7 +171,8 @@ test('navigates through images on click', async () => {
   
   // Open test.txt (index 1)
   const fileItem = await screen.findByText(/test.txt/i);
-  fireEvent.click(fileItem);
+  const container = fileItem.closest('div').parentElement;
+  fireEvent.click(container);
   
   // On test.txt. Get container.
   const textElement = await screen.findByText(/file content/i);
@@ -197,7 +202,8 @@ test('handles folder navigation and breadcrumbs', async () => {
   // Use getAllByText and pick the one in the list (span)
   const folders = await screen.findAllByText(/folder1/i);
   const folderListItem = folders.find(el => el.tagName === 'SPAN');
-  fireEvent.click(folderListItem);
+  const container = folderListItem.closest('div').parentElement;
+  fireEvent.click(container);
   
   await waitFor(() => {
     expect(screen.getByText('Home')).toBeInTheDocument();
@@ -243,10 +249,12 @@ test('handles selection mode and clipboard', async () => {
 
   render(<App />);
   const fileItem = await screen.findByText(/test.txt/i);
+  const container = fileItem.closest('div').parentElement;
+  const icon = container.querySelector('div');
   
-  // Long press to enter selection mode
+  // Long press on icon to enter selection mode
   jest.useFakeTimers();
-  fireEvent.touchStart(fileItem, { touches: [{ clientX: 100, clientY: 100 }] });
+  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
   jest.advanceTimersByTime(650); // Ensure timer fires
   
   await waitFor(() => {
@@ -259,6 +267,38 @@ test('handles selection mode and clipboard', async () => {
   await waitFor(() => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test.txt');
     expect(window.alert).toHaveBeenCalledWith('已複製檔案名稱');
+  });
+  jest.useRealTimers();
+});
+
+test('handles long press on filename for rename', async () => {
+  const fetchMock = setupMocks('a32a96f2');
+  render(<App />);
+  const filename = await screen.findByText('test.txt');
+  
+  // Long press on text
+  jest.useFakeTimers();
+  fireEvent.touchStart(filename, { touches: [{ clientX: 100, clientY: 100 }] });
+  jest.advanceTimersByTime(1000);
+  
+  // Use real timers for waitFor to work if needed, though here we just need to wait for state update
+  jest.useRealTimers();
+  
+  // Should show input
+  const input = await screen.findByDisplayValue('test.txt');
+  expect(input).toBeInTheDocument();
+  
+  // Change name and enter
+  fireEvent.change(input, { target: { value: 'newname.txt' } });
+  
+  fetchMock.mockImplementationOnce(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) }));
+  fireEvent.keyDown(input, { key: 'Enter' });
+  
+  await waitFor(() => {
+    expect(fetchMock).toHaveBeenCalledWith('/explorer/api/rename', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ oldPath: 'test.txt', newPath: 'newname.txt' })
+    }));
   });
   jest.useRealTimers();
 });
