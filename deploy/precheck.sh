@@ -25,11 +25,10 @@ ENV_VALUES=$(grep -v '^#' .env | grep '=' | cut -d'=' -f2- | grep -v '^$' | sed 
 
 while read -r val; do
     [ -z "$val" ] && continue
-    # 使用原生 grep 進行全文字檢查，排除 .env, 排除 node_modules, 排除 .git, 排除 .env.example
-    # 若發現匹配則輸出檔案路徑並終止
-    if grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build" | grep -q .; then
+    # 簡化邏輯：利用 git ls-files 僅檢查受版本控制的檔案，排除 .env.example
+    if git ls-files | grep -v ".env.example" | xargs grep -lF "$val" | grep -q .; then
         echo "❌ 錯誤：偵測到硬編碼敏感資訊 \"$val\" 存在於以下檔案中："
-        grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build"
+        git ls-files | grep -v ".env.example" | xargs grep -lF "$val"
         exit 1
     fi
 done <<< "$ENV_VALUES"
