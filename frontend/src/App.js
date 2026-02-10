@@ -23,6 +23,42 @@ const App = () => {
   const [contextMenu, setContextMenu] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [touchStartPos, setTouchStartPos] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+  const toggleFileSelection = (fileName) => {
+    setSelectedFiles(prev => {
+      const next = prev.includes(fileName)
+        ? prev.filter(name => name !== fileName)
+        : [...prev, fileName];
+      if (next.length === 0) {
+        setIsSelectionMode(false);
+      }
+      return next;
+    });
+  };
+
+  const copyNamesToClipboard = () => {
+    const text = selectedFiles.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      alert('已複製檔案名稱');
+      setIsSelectionMode(false);
+      setSelectedFiles([]);
+    });
+  };
+
+  const deleteSelected = () => {
+    if (!window.confirm(`確定要刪除選中的 ${selectedFiles.length} 個項目嗎？`)) return;
+    
+    Promise.all(selectedFiles.map(name => {
+      const path = currentPath ? `${currentPath}/${name}` : name;
+      return fetch(`/explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+    }))
+    .then(() => {
+      fetchFiles(currentPath);
+    })
+    .catch(err => setError(err.message));
+  };
 
   const formatSize = (bytes) => {
     if (!bytes || bytes === '-') return '';
@@ -47,6 +83,8 @@ const App = () => {
     setLoading(true);
     setError(null);
     setViewMode('list');
+    setIsSelectionMode(false);
+    setSelectedFiles([]);
     if (!skipPushState) {
       updateUrl(path);
     }
@@ -138,7 +176,8 @@ const App = () => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     const timer = setTimeout(() => {
-      setContextMenu({ file, x: '50%', y: '50%' });
+      setIsSelectionMode(true);
+      setSelectedFiles([file.name]);
     }, 600);
     setLongPressTimer(timer);
   };
@@ -280,6 +319,35 @@ const App = () => {
             ))}
           </div>
         </div>
+
+        {/* Multi-select Toolbar */}
+        {isSelectionMode && (
+          <div className="flex items-center justify-between px-3 h-10 bg-blue-50 border-t border-blue-100 animate-in slide-in-from-top duration-200">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => { setIsSelectionMode(false); setSelectedFiles([]); }}
+                className="text-blue-600 font-bold"
+              >
+                取消
+              </button>
+              <span className="text-blue-800 font-bold">已選取 {selectedFiles.length} 個</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={copyNamesToClipboard}
+                className="px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-lg active:scale-95 transition-transform"
+              >
+                複製名稱
+              </button>
+              <button 
+                onClick={deleteSelected}
+                className="px-3 py-1 bg-red-500 text-white text-sm font-bold rounded-lg active:scale-95 transition-transform"
+              >
+                刪除
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="max-w-screen-xl mx-auto">
@@ -330,6 +398,10 @@ const App = () => {
                 <div 
                   key={i} 
                   onClick={() => {
+                    if (isSelectionMode) {
+                      toggleFileSelection(file.name);
+                      return;
+                    }
                     if (contextMenu) {
                       setContextMenu(null);
                       return;
@@ -340,13 +412,26 @@ const App = () => {
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    setContextMenu({ file, x: e.clientX, y: e.clientY });
+                    if (!isSelectionMode) {
+                      setIsSelectionMode(true);
+                      setSelectedFiles([file.name]);
+                    }
                   }}
                   onTouchStart={(e) => handleTouchStart(file, e)}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
-                  className="flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative"
+                  className={`flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative ${selectedFiles.includes(file.name) ? 'bg-blue-50/50' : ''}`}
                 >
+                  {isSelectionMode && (
+                    <div className="mr-3 flex items-center justify-center">
+                      <input 
+                        type="checkbox" 
+                        checked={selectedFiles.includes(file.name)}
+                        onChange={() => {}} // Controlled by parent div click
+                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </div>
+                  )}
                   <div className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}>
                     {file.type === 'folder' ? (
                       <Folder size={20} className="text-amber-500 fill-amber-200" />

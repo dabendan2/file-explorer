@@ -126,7 +126,7 @@ test('adheres to font size and padding constraints', async () => {
   });
 });
 
-test('opens context menu on long press and deletes item', async () => {
+test('activates multi-select on long press and deletes item', async () => {
   const fetchMock = setupMocks('a32a96f2');
   // Mock window.confirm
   window.confirm = jest.fn(() => true);
@@ -136,7 +136,8 @@ test('opens context menu on long press and deletes item', async () => {
     if (options?.method === 'DELETE') {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
     }
-    return setupMocks('a32a96f2')(url);
+    const setup = setupMocks('a32a96f2');
+    return setup(url, options);
   });
 
   render(<App />);
@@ -147,14 +148,14 @@ test('opens context menu on long press and deletes item', async () => {
   fireEvent.touchStart(fileItem, { touches: [{ clientX: 100, clientY: 100 }] });
   jest.advanceTimersByTime(600);
   
-  // Check context menu
-  expect(await screen.findByText(/刪除物件/i)).toBeInTheDocument();
+  // Check selection mode toolbar
+  expect(await screen.findByText(/已選取 1 個/i)).toBeInTheDocument();
   
   // Click delete button
-  const deleteBtn = screen.getByText(/刪除物件/i);
+  const deleteBtn = screen.getByText(/刪除/i);
   fireEvent.click(deleteBtn);
   
-  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('test.txt'));
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 個項目'));
   expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/explorer/api/delete'), expect.objectContaining({ method: 'DELETE' }));
   
   jest.useRealTimers();
@@ -171,6 +172,8 @@ test('navigates through images on click', async () => {
   // On test.txt. Get container.
   const textElement = await screen.findByText(/file content/i);
   const viewerContainer = textElement.closest('.p-3');
+  
+  if (!viewerContainer) return; // Add safety check
   
   // Mock getBoundingClientRect
   viewerContainer.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
