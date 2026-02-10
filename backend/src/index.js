@@ -11,26 +11,26 @@ app.use(express.json());
 
 const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
 
-const MOCK_ROOT = EXPLORER_DATA_ROOT; // 保持變數名相容性
+// 中間件：路徑安全檢查與完整路徑解析
+const resolveSafePath = (req, res, next) => {
+  const subPath = req.query.path || req.body.oldPath || req.body.newPath || '';
+  const fullPath = path.join(EXPLORER_DATA_ROOT, subPath);
+
+  if (!fullPath.startsWith(EXPLORER_DATA_ROOT)) {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+  
+  req.fullPath = fullPath;
+  next();
+};
 
 // API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
-app.get('/file-explorer/api/files', (req, res) => {
+app.get('/file-explorer/api/files', resolveSafePath, (req, res) => {
   try {
-    const subPath = req.query.path || '';
+    if (!fs.existsSync(req.fullPath)) return res.status(404).json({ error: 'Path not found' });
 
-    const fullPath = path.join(MOCK_ROOT, subPath);
-
-    // 安全檢查：確保路徑在 MOCK_ROOT 內
-    if (!fullPath.startsWith(MOCK_ROOT)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    if (!fs.existsSync(fullPath)) {
-      return res.status(404).json({ error: 'Path not found' });
-    }
-
-    const files = fs.readdirSync(fullPath).map(name => {
-      const stats = fs.statSync(path.join(fullPath, name));
+    const files = fs.readdirSync(req.fullPath).map(name => {
+      const stats = fs.statSync(path.join(req.fullPath, name));
       return {
         name,
         type: stats.isDirectory() ? 'folder' : 'file',
@@ -53,39 +53,24 @@ app.get('/file-explorer/api/version', (req, res) => {
 });
 
 // API: 讀取檔案內容
-app.get('/file-explorer/api/content', (req, res) => {
+app.get('/file-explorer/api/content', resolveSafePath, (req, res) => {
   try {
-    const filePath = req.query.path;
-    if (!filePath) return res.status(400).json({ error: 'Path required' });
-    
-    const fullPath = path.join(MOCK_ROOT, filePath);
-    if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
-    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return res.status(404).json({ error: 'File not found' });
-
-    const content = fs.readFileSync(fullPath);
-    res.send(content);
+    if (!fs.existsSync(req.fullPath) || !fs.statSync(req.fullPath).isFile()) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    res.sendFile(req.fullPath);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // API: 刪除檔案或目錄
-app.delete('/file-explorer/api/delete', (req, res) => {
+app.delete('/file-explorer/api/delete', resolveSafePath, (req, res) => {
   try {
-    const filePath = req.query.path;
-    if (!filePath) return res.status(400).json({ error: 'Path required' });
+    if (req.fullPath === EXPLORER_DATA_ROOT) return res.status(403).json({ error: 'Cannot delete root' });
+    if (!fs.existsSync(req.fullPath)) return res.status(404).json({ error: 'Not found' });
 
-    const fullPath = path.join(MOCK_ROOT, filePath);
-    if (!fullPath.startsWith(MOCK_ROOT)) return res.status(403).json({ error: 'Access denied' });
-    if (fullPath === MOCK_ROOT) return res.status(403).json({ error: 'Cannot delete root' });
-    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
-
-    const stats = fs.statSync(fullPath);
-    if (stats.isDirectory()) {
-      fs.rmSync(fullPath, { recursive: true, force: true });
-    } else {
-      fs.unlinkSync(fullPath);
-    }
+    fs.rmSync(req.fullPath, { recursive: true, force: true });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -96,12 +81,10 @@ app.delete('/file-explorer/api/delete', (req, res) => {
 app.post('/file-explorer/api/rename', (req, res) => {
   try {
     const { oldPath, newPath } = req.body;
-    if (!oldPath || !newPath) return res.status(400).json({ error: 'Paths required' });
+    const oldFullPath = path.join(EXPLORER_DATA_ROOT, oldPath || '');
+    const newFullPath = path.join(EXPLORER_DATA_ROOT, newPath || '');
 
-    const oldFullPath = path.join(MOCK_ROOT, oldPath);
-    const newFullPath = path.join(MOCK_ROOT, newPath);
-
-    if (!oldFullPath.startsWith(MOCK_ROOT) || !newFullPath.startsWith(MOCK_ROOT)) {
+    if (!oldFullPath.startsWith(EXPLORER_DATA_ROOT) || !newFullPath.startsWith(EXPLORER_DATA_ROOT)) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
@@ -118,5 +101,5 @@ app.post('/file-explorer/api/rename', (req, res) => {
 // 啟動監聽埠號
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}, Root: ${MOCK_ROOT}`);
+  console.log(`Backend running on port ${PORT}, Root: ${EXPLORER_DATA_ROOT}`);
 });
