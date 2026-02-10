@@ -119,7 +119,13 @@ const App = () => {
       : `/file-explorer/api/files`;
     fetch(url)
       .then(res => {
-        if (!res.ok) throw new Error('連線失敗');
+        if (!res.ok) {
+          return res.json().then(data => {
+            throw new Error(data.error || '連線失敗');
+          }).catch(() => {
+            throw new Error('連線失敗');
+          });
+        }
         return res.json();
       })
       .then(data => {
@@ -137,6 +143,7 @@ const App = () => {
   const fetchFileContent = (file, pathOverride = null, skipPushState = false) => {
     const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
     const fileName = file?.name || path.split('/').pop();
+    
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
     const isVideo = /\.(mp4|webm|ogg)$/i.test(fileName);
     setSelectedFile(file || { name: fileName });
@@ -150,7 +157,13 @@ const App = () => {
     } else {
       fetch(`/file-explorer/api/content?path=${encodeURIComponent(path)}`)
         .then(res => {
-          if (!res.ok) throw new Error('連線失敗');
+          if (!res.ok) {
+            return res.json().then(data => {
+              throw new Error(data.error || '連線失敗');
+            }).catch(() => {
+              throw new Error('連線失敗');
+            });
+          }
           return res.text();
         })
         .then(text => {

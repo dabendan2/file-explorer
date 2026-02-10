@@ -317,3 +317,37 @@ test('handles version mismatch error', async () => {
   render(<App />);
   expect(await screen.findByText(/版本不一致/i)).toBeInTheDocument();
 });
+
+test('allows browsing hidden files like .env', async () => {
+  const fetchMock = setupMocks('a32a96f2');
+  
+  fetchMock.mockImplementation((url) => {
+    const urlStr = url.toString();
+    if (urlStr.includes('/file-explorer/api/version')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ gitSha: 'a32a96f2' }),
+      });
+    }
+    if (urlStr.includes('/file-explorer/api/files')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([...mockFiles, { name: '.env', type: 'file', size: 100 }]),
+      });
+    }
+    if (urlStr.includes('path=.env')) {
+      return Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve('PORT=PLACEHOLDER')
+      });
+    }
+    return setupMocks('a32a96f2')(url);
+  });
+
+  render(<App />);
+  const fileItem = await screen.findByText('.env');
+  fireEvent.click(fileItem);
+
+  // 應能成功顯示內容
+  expect(await screen.findByText(/PORT=PLACEHOLDER/i)).toBeInTheDocument();
+});
