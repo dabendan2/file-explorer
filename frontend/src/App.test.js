@@ -159,3 +159,30 @@ test('opens context menu on long press and deletes item', async () => {
   
   jest.useRealTimers();
 });
+
+test('navigates through images on click', async () => {
+  setupMocks('a32a96f2');
+  render(<App />);
+  
+  // Open test.txt (index 1)
+  const fileItem = await screen.findByText(/test.txt/i);
+  fireEvent.click(fileItem);
+  
+  // On test.txt. Get container.
+  const textElement = await screen.findByText(/file content/i);
+  const viewerContainer = textElement.closest('.p-3');
+  
+  // Mock getBoundingClientRect
+  viewerContainer.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
+
+  // Now selectedFile is test.txt (index 1)
+  // Click right 1/3 (next) -> should go to pic.png (index 2)
+  fireEvent.click(viewerContainer, { clientX: 250 });
+  
+  // Check if image is rendered
+  expect(await screen.findByAltText('')).toBeInTheDocument();
+  
+  // selectedFile is now pic.png. Click left 1/3 -> should go back to test.txt
+  fireEvent.click(viewerContainer, { clientX: 50 });
+  expect(await screen.findByText(/file content/i)).toBeInTheDocument();
+});

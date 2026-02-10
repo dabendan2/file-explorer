@@ -99,6 +99,27 @@ const App = () => {
     }
   };
 
+  const handleViewerClick = (e) => {
+    if (!selectedFile) return;
+    
+    const { clientX, currentTarget } = e;
+    const { left, width } = currentTarget.getBoundingClientRect();
+    const relativeX = clientX - left;
+    
+    const fileIndex = files.findIndex(f => f.name === selectedFile.name);
+    if (fileIndex === -1) return;
+
+    if (relativeX < width / 3) {
+      // Previous
+      const prevFile = [...files.slice(0, fileIndex)].reverse().find(f => f.type === 'file');
+      if (prevFile) fetchFileContent(prevFile);
+    } else if (relativeX > (width * 2) / 3) {
+      // Next
+      const nextFile = files.slice(fileIndex + 1).find(f => f.type === 'file');
+      if (nextFile) fetchFileContent(nextFile);
+    }
+  };
+
   const deleteItem = (file) => {
     if (!window.confirm(`確定要刪除 ${file.name} 嗎？`)) return;
     const path = currentPath ? `${currentPath}/${file.name}` : file.name;
@@ -281,7 +302,7 @@ const App = () => {
               </button>
               <h2 className="text-xl font-bold truncate text-gray-700">{selectedFile?.name}</h2>
             </div>
-            <div className="p-3">
+            <div className="p-3" onClick={handleViewerClick}>
               {selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name) ? (
                 <div className="bg-white p-2 rounded-2xl shadow-inner border border-orange-50">
                   <img src={fileContent} alt="" className="max-w-full h-auto mx-auto rounded-xl" />
