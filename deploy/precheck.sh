@@ -25,11 +25,11 @@ ENV_VALUES=$(grep -v '^#' .env | grep '=' | cut -d'=' -f2- | grep -v '^$' | sed 
 
 while read -r val; do
     [ -z "$val" ] && continue
-    # 使用原生 grep 進行全文字檢查，排除 .env, 排除 node_modules, 排除 .git
+    # 使用原生 grep 進行全文字檢查，排除 .env, 排除 node_modules, 排除 .git, 排除 .env.example
     # 若發現匹配則輸出檔案路徑並終止
-    if grep -rF "$val" . --exclude=".env" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build" | grep -q .; then
+    if grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build" | grep -q .; then
         echo "❌ 錯誤：偵測到硬編碼敏感資訊 \"$val\" 存在於以下檔案中："
-        grep -rF "$val" . --exclude=".env" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build"
+        grep -rF "$val" . --exclude=".env" --exclude=".env.example" --exclude-dir="node_modules" --exclude-dir=".git" --exclude-dir="logs" --exclude-dir="build"
         exit 1
     fi
 done <<< "$ENV_VALUES"
