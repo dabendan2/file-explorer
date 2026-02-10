@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight, Image as ImageIcon, ArrowLeft } from 'lucide-react';
+import { Folder, File, ChevronRight, Image as ImageIcon, ArrowLeft, Video } from 'lucide-react';
 
 const App = () => {
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
@@ -74,12 +74,13 @@ const App = () => {
     const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
     const fileName = file?.name || path.split('/').pop();
     const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(fileName);
     setSelectedFile(file || { name: fileName });
     setError(null);
     if (!skipPushState) {
       updateUrl(pathOverride ? path.split('/').slice(0, -1).join('/') : currentPath, fileName);
     }
-    if (isImg) {
+    if (isImg || isVideo) {
       setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
       setViewMode('viewer');
     } else {
@@ -285,6 +286,10 @@ const App = () => {
                 <div className="bg-white p-2 rounded-2xl shadow-inner border border-orange-50">
                   <img src={fileContent} alt="" className="max-w-full h-auto mx-auto rounded-xl" />
                 </div>
+              ) : selectedFile && /\.(mp4|webm|ogg)$/i.test(selectedFile.name) ? (
+                <div className="bg-white p-2 rounded-2xl shadow-inner border border-orange-50">
+                  <video src={fileContent} controls className="max-w-full h-auto mx-auto rounded-xl" />
+                </div>
               ) : (
                 <pre className="text-lg font-mono bg-[#FFFBF7] p-4 rounded-2xl overflow-x-auto leading-relaxed border border-orange-100 text-gray-800 shadow-sm">
                   {fileContent}
@@ -327,6 +332,8 @@ const App = () => {
                     ) : (
                       /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
                         <ImageIcon size={20} className="text-blue-500" /> : 
+                        /\.(mp4|webm|ogg)$/i.test(file.name) ?
+                        <Video size={20} className="text-purple-500" /> :
                         <File size={20} className="text-blue-400" />
                     )}
                   </div>
