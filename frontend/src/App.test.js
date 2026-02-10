@@ -346,8 +346,40 @@ test('allows browsing hidden files like .env', async () => {
 
   render(<App />);
   const fileItem = await screen.findByText('.env');
-  fireEvent.click(fileItem);
+  
+  // 點擊檔名以外的容器部分以觸發內容讀取
+  const container = fileItem.closest('div').parentElement;
+  fireEvent.click(container);
 
-  // 應能成功顯示內容
+  // 根據 TDD 預期：後端應該要成功回傳內容
   expect(await screen.findByText(/PORT=PLACEHOLDER/i)).toBeInTheDocument();
+});
+
+test('multi-select mode prevents automatic rename on short click', async () => {
+  setupMocks('a32a96f2');
+  render(<App />);
+  const fileItem = await screen.findByText(/test.txt/i);
+  const container = fileItem.closest('div').parentElement;
+  const icon = container.querySelector('div');
+  
+  // 1. 進入多選模式 (長按圖示)
+  jest.useFakeTimers();
+  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
+  jest.advanceTimersByTime(650);
+  jest.useRealTimers();
+  
+  expect(await screen.findByText(/已選取 1 個/i)).toBeInTheDocument();
+  
+  // 2. 在多選模式下，短按檔名
+  // 此時應該只是切換選取狀態，而不應該開啟重命名輸入框
+  fireEvent.click(fileItem);
+  
+  // 驗證輸入框不存在 (若重構沒做好，這裡會噴出輸入框)
+  const input = screen.queryByDisplayValue('test.txt');
+  expect(input).not.toBeInTheDocument();
+  
+  // 驗證選取狀態已取消 (toggle)
+  await waitFor(() => {
+    expect(screen.queryByText(/已選取 [1-9] 個/i)).not.toBeInTheDocument();
+  });
 });

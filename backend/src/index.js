@@ -58,7 +58,8 @@ app.get('/file-explorer/api/content', resolveSafePath, (req, res) => {
     if (!fs.existsSync(req.fullPath) || !fs.statSync(req.fullPath).isFile()) {
       return res.status(404).json({ error: 'File not found' });
     }
-    res.sendFile(req.fullPath);
+    // 允許讀取點開頭的隱藏檔案 (dotfiles: 'allow')
+    res.sendFile(req.fullPath, { dotfiles: 'allow' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
