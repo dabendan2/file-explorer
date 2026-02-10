@@ -101,6 +101,16 @@ app.post('/file-explorer/api/rename', (req, res) => {
 
 // 啟動監聽埠號
 const PORT = process.env.PORT;
+
+process.on('uncaughtException', (err) => {
+  console.error(`[${new Date().toISOString()}] UNCAUGHT EXCEPTION:`, err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error(`[${new Date().toISOString()}] UNHANDLED REJECTION at:`, promise, 'reason:', reason);
+});
+
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}, Root: ${EXPLORER_DATA_ROOT}`);
 });
