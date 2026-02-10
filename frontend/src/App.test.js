@@ -11,19 +11,19 @@ const mockFiles = [
 const setupMocks = (gitSha = 'a32a96f2') => {
   return jest.spyOn(global, 'fetch').mockImplementation((url) => {
     const urlStr = url.toString();
-    if (urlStr === '/explorer/api/version') {
+    if (urlStr === '/file-explorer/api/version') {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ gitSha: 'a32a96f2' }),
       });
     }
-    if (urlStr.includes('/explorer/api/files')) {
+    if (urlStr.includes('/file-explorer/api/files')) {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve(mockFiles),
       });
     }
-    if (urlStr.includes('/explorer/api/content')) {
+    if (urlStr.includes('/file-explorer/api/content')) {
       return Promise.resolve({
         ok: true,
         text: () => Promise.resolve('file content'),
@@ -65,7 +65,7 @@ test('switches to viewer mode on file click', async () => {
 test('switches mode after 7 clicks on title', async () => {
   const fetchMock = setupMocks('a32a96f2');
   render(<App />);
-  const titleBtn = await screen.findByRole('button', { name: /Explorer/i });
+  const titleBtn = await screen.findByRole('button', { name: /File Explorer/i });
   
   // Click 7 times
   for (let i = 0; i < 7; i++) {
@@ -160,7 +160,7 @@ test('activates multi-select on long press and deletes item', async () => {
   fireEvent.click(deleteBtn);
   
   expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 個項目'));
-  expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/explorer/api/delete'), expect.objectContaining({ method: 'DELETE' }));
+  expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/file-explorer/api/delete'), expect.objectContaining({ method: 'DELETE' }));
   
   jest.useRealTimers();
 });
@@ -295,7 +295,7 @@ test('handles long press on filename for rename', async () => {
   fireEvent.keyDown(input, { key: 'Enter' });
   
   await waitFor(() => {
-    expect(fetchMock).toHaveBeenCalledWith('/explorer/api/rename', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('/file-explorer/api/rename', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ oldPath: 'test.txt', newPath: 'newname.txt' })
     }));
@@ -305,7 +305,7 @@ test('handles long press on filename for rename', async () => {
 
 test('handles version mismatch error', async () => {
   jest.spyOn(global, 'fetch').mockImplementation((url) => {
-    if (url.toString().includes('/explorer/api/version')) {
+    if (url.toString().includes('/file-explorer/api/version')) {
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ gitSha: 'mismatch-sha' }),

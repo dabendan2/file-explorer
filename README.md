@@ -1,6 +1,6 @@
-# Explorer
+# File Explorer
 
-A responsive web-based file explorer built with React and Express, designed for sandbox environments.
+A responsive web-based file file-explorer built with React and Express, designed for sandbox environments.
 
 ## Features
 - **Browse & Navigate**: Multi-level directory browsing with a breadcrumb path bar.

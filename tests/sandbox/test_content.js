@@ -18,7 +18,7 @@ async function runContentTest() {
   const pngPath = 'test.png';
   const expectedBuffer = fs.readFileSync(path.join(mockRoot, pngPath));
 
-  http.get(`http://localhost:5003/explorer/api/content?path=${pngPath}`, (res) => {
+  http.get(`http://localhost:5003/file-explorer/api/content?path=${pngPath}`, (res) => {
     console.log('Headers:', res.headers);
     const chunks = [];
     res.on('data', chunk => chunks.push(chunk));

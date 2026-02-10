@@ -1,5 +1,5 @@
 services:
-  explorer-backend:
+  file-explorer-backend:
     build: ./backend
     ports:
       - "${PORT}:${PORT}"
@@ -9,9 +9,9 @@ services:
     volumes:
       - ./tests/sandbox/mock_root:/app/sandbox
 
-  explorer-frontend:
+  file-explorer-frontend:
     build: ./frontend
     ports:
       - "80:80"
     depends_on:
-      - explorer-backend
+      - file-explorer-backend

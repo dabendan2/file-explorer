@@ -7,7 +7,7 @@ const App = () => {
   const [currentPath, setCurrentPath] = useState(() => {
     if (process.env.NODE_ENV === 'test') return '';
     const params = new URLSearchParams(window.location.search);
-    return params.get('path') || localStorage.getItem('explorer-path') || '';
+    return params.get('path') || localStorage.getItem('file-explorer-path') || '';
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,7 +36,7 @@ const App = () => {
     const oldPath = currentPath ? `${currentPath}/${file.name}` : file.name;
     const newPath = currentPath ? `${currentPath}/${newName}` : newName;
     
-    fetch(`/explorer/api/rename`, {
+    fetch(`/file-explorer/api/rename`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ oldPath, newPath })
@@ -78,7 +78,7 @@ const App = () => {
     
     Promise.all(selectedFiles.map(name => {
       const path = currentPath ? `${currentPath}/${name}` : name;
-      return fetch(`/explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
+      return fetch(`/file-explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' });
     }))
     .then(() => {
       fetchFiles(currentPath);
@@ -115,8 +115,8 @@ const App = () => {
       updateUrl(path);
     }
     const url = path 
-      ? `/explorer/api/files?path=${encodeURIComponent(path)}` 
-      : `/explorer/api/files`;
+      ? `/file-explorer/api/files?path=${encodeURIComponent(path)}` 
+      : `/file-explorer/api/files`;
     fetch(url)
       .then(res => {
         if (!res.ok) throw new Error('連線失敗');
@@ -125,7 +125,7 @@ const App = () => {
       .then(data => {
         setFiles(data);
         setCurrentPath(path);
-        localStorage.setItem('explorer-path', path);
+        localStorage.setItem('file-explorer-path', path);
         setLoading(false);
       })
       .catch((err) => {
@@ -145,10 +145,10 @@ const App = () => {
       updateUrl(pathOverride ? path.split('/').slice(0, -1).join('/') : currentPath, fileName);
     }
     if (isImg || isVideo) {
-      setFileContent(`/explorer/api/content?path=${encodeURIComponent(path)}`);
+      setFileContent(`/file-explorer/api/content?path=${encodeURIComponent(path)}`);
       setViewMode('viewer');
     } else {
-      fetch(`/explorer/api/content?path=${encodeURIComponent(path)}`)
+      fetch(`/file-explorer/api/content?path=${encodeURIComponent(path)}`)
         .then(res => {
           if (!res.ok) throw new Error('連線失敗');
           return res.text();
@@ -187,7 +187,7 @@ const App = () => {
   const deleteItem = (file) => {
     if (!window.confirm(`確定要刪除 ${file.name} 嗎？`)) return;
     const path = currentPath ? `${currentPath}/${file.name}` : file.name;
-    fetch(`/explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' })
+    fetch(`/file-explorer/api/delete?path=${encodeURIComponent(path)}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('刪除失敗');
         return res.json();
@@ -242,7 +242,7 @@ const App = () => {
 
   useEffect(() => {
     // Check version and fetch
-    fetch('/explorer/api/version')
+    fetch('/file-explorer/api/version')
       .then(res => {
         if (!res.ok) throw new Error('無法獲取後端版本資訊');
         return res.json();
@@ -299,7 +299,7 @@ const App = () => {
     const newClicks = titleClicks + 1;
     setTitleClicks(newClicks);
     if (newClicks >= 7) {
-      fetch('/explorer/api/version?mode=google')
+      fetch('/file-explorer/api/version?mode=google')
         .then(() => {
           setViewMode('google');
         })
@@ -320,7 +320,7 @@ const App = () => {
               onClick={handleTitleClick}
               className={`${viewMode === 'google' ? 'text-red-600' : 'text-[#1a73e8]'} hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap`}
             >
-              <span className="text-3xl font-black tracking-tight drop-shadow-sm">Explorer</span>
+              <span className="text-3xl font-black tracking-tight drop-shadow-sm">File Explorer</span>
             </button>
             <span className="text-[10px] text-gray-400 font-mono select-none self-end mb-2">
               {gitSha}

@@ -18,7 +18,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
     # 檢查後端本地 API
     echo "驗證本地 API..."
-    LOCAL_VERSION_INFO=$(curl -sf "http://localhost:$PORT/explorer/api/version")
+    LOCAL_VERSION_INFO=$(curl -sf "http://localhost:$PORT/file-explorer/api/version")
     
     # 檢查對外前端域名
     echo "驗證對外前端入口..."
@@ -64,7 +64,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
     # 3. 驗證 Google Drive 連結
     echo "驗證 Google Drive 連結..."
-    GOOGLE_CHECK=$(curl -s "http://localhost:$PORT/explorer/api/files?mode=google")
+    GOOGLE_CHECK=$(curl -s "http://localhost:$PORT/file-explorer/api/files?mode=google")
     if echo "$GOOGLE_CHECK" | grep -q "error"; then
         echo "❌ Google Drive 連結失敗: $GOOGLE_CHECK"
         exit 1
@@ -73,7 +73,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
     # 5. 驗證是否誤用 Mock Root (測試沙箱資料)
     echo "驗證資料來源安全性..."
-    LOCAL_CHECK=$(curl -s "http://localhost:$PORT/explorer/api/files")
+    LOCAL_CHECK=$(curl -s "http://localhost:$PORT/file-explorer/api/files")
     if echo "$LOCAL_CHECK" | grep -qE "empty_folder|new_folder"; then
         echo "❌ 錯誤：後端正在讀取測試沙箱 (Mock Root) 資料！請檢查正式環境 .env 設定。"
         exit 1
@@ -85,8 +85,8 @@ if [ -n "$FRONTEND_URL" ]; then
     # 嘗試從 asset-manifest.json 取得 main.js 路徑
     FE_JS_URL=$(curl -sf "$FRONTEND_URL/asset-manifest.json" | jq -r '.files["main.js"]' 2>/dev/null || echo "")
     if [ -n "$FE_JS_URL" ]; then
-        # 移除 URL 中的基礎路徑前綴 (例如 /explorer/) 以便拼接
-        FE_JS_REL_PATH=$(echo "$FE_JS_URL" | sed "s|^/explorer/||; s|^explorer/||")
+        # 移除 URL 中的基礎路徑前綴 (例如 /file-explorer/) 以便拼接
+        FE_JS_REL_PATH=$(echo "$FE_JS_URL" | sed "s|^/file-explorer/||; s|^file-explorer/||")
         # 直接從前端 URL 獲取 JS 內容並搜尋 Git SHA
         FE_SHA=$(curl -sf "$FRONTEND_URL/$FE_JS_REL_PATH" | grep -oE "[0-9a-f]{7,40}" | grep "$REACT_APP_GIT_SHA" || echo "")
         

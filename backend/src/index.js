@@ -14,7 +14,7 @@ const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname
 const MOCK_ROOT = EXPLORER_DATA_ROOT; // 保持變數名相容性
 
 // API: 讀取目錄內容並返回檔案列表 (支援路徑參數)
-app.get('/explorer/api/files', (req, res) => {
+app.get('/file-explorer/api/files', (req, res) => {
   try {
     const subPath = req.query.path || '';
 
@@ -45,7 +45,7 @@ app.get('/explorer/api/files', (req, res) => {
 });
 
 // API: 獲取系統版本資訊
-app.get('/explorer/api/version', (req, res) => {
+app.get('/file-explorer/api/version', (req, res) => {
   res.json({
     gitSha: process.env.REACT_APP_GIT_SHA || 'unknown',
     dataRoot: EXPLORER_DATA_ROOT
@@ -53,7 +53,7 @@ app.get('/explorer/api/version', (req, res) => {
 });
 
 // API: 讀取檔案內容
-app.get('/explorer/api/content', (req, res) => {
+app.get('/file-explorer/api/content', (req, res) => {
   try {
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: 'Path required' });
@@ -70,7 +70,7 @@ app.get('/explorer/api/content', (req, res) => {
 });
 
 // API: 刪除檔案或目錄
-app.delete('/explorer/api/delete', (req, res) => {
+app.delete('/file-explorer/api/delete', (req, res) => {
   try {
     const filePath = req.query.path;
     if (!filePath) return res.status(400).json({ error: 'Path required' });
@@ -93,7 +93,7 @@ app.delete('/explorer/api/delete', (req, res) => {
 });
 
 // API: 重命名
-app.post('/explorer/api/rename', (req, res) => {
+app.post('/file-explorer/api/rename', (req, res) => {
   try {
     const { oldPath, newPath } = req.body;
     if (!oldPath || !newPath) return res.status(400).json({ error: 'Paths required' });

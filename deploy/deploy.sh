@@ -10,7 +10,7 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-echo "開始部署 explorer..."
+echo "開始部署 file-explorer..."
 mkdir -p "$EXPLORER_DEPLOY_TARGET"
 
 # 3. 建置前端靜態檔案並同步至目標部署目錄

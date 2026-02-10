@@ -1,5 +1,5 @@
 {
-  "name": "explorer-backend",
+  "name": "file-explorer-backend",
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {
