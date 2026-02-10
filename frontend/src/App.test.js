@@ -189,3 +189,91 @@ test('navigates through images on click', async () => {
   fireEvent.click(viewerContainer, { clientX: 50 });
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
 });
+
+test('handles folder navigation and breadcrumbs', async () => {
+  setupMocks('a32a96f2');
+  render(<App />);
+  
+  // Use getAllByText and pick the one in the list (span)
+  const folders = await screen.findAllByText(/folder1/i);
+  const folderListItem = folders.find(el => el.tagName === 'SPAN');
+  fireEvent.click(folderListItem);
+  
+  await waitFor(() => {
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    // The breadcrumb folder1 should be the button
+    const breadcrumb = screen.getAllByText('folder1').find(el => el.tagName === 'BUTTON');
+    expect(breadcrumb).toHaveClass('text-orange-500');
+  });
+
+  const homeBtn = screen.getByText('Home');
+  fireEvent.click(homeBtn);
+  expect(await screen.findByText(/folder1/i)).toBeInTheDocument();
+});
+
+test('handles API errors and retry', async () => {
+  const fetchMock = setupMocks('a32a96f2');
+  fetchMock.mockImplementationOnce(() => Promise.reject(new Error('Network Error')));
+  
+  render(<App />);
+  expect(await screen.findByText(/Network Error/i)).toBeInTheDocument();
+  
+  const retryBtn = screen.getByText(/重試/i);
+  // Mock success for retry
+  setupMocks('a32a96f2');
+  
+  // window.location.reload is not mockable easily, but we can check if it's called
+  const originalLocation = window.location;
+  delete window.location;
+  window.location = { ...originalLocation, reload: jest.fn() };
+  fireEvent.click(retryBtn);
+  expect(window.location.reload).toHaveBeenCalled();
+  window.location = originalLocation;
+});
+
+test('handles selection mode and clipboard', async () => {
+  setupMocks('a32a96f2');
+  // Mock clipboard
+  Object.assign(navigator, {
+    clipboard: {
+      writeText: jest.fn().mockImplementation(() => Promise.resolve()),
+    },
+  });
+  window.alert = jest.fn();
+
+  render(<App />);
+  const fileItem = await screen.findByText(/test.txt/i);
+  
+  // Long press to enter selection mode
+  jest.useFakeTimers();
+  fireEvent.touchStart(fileItem, { touches: [{ clientX: 100, clientY: 100 }] });
+  jest.advanceTimersByTime(650); // Ensure timer fires
+  
+  await waitFor(() => {
+    expect(screen.getByText(/已選取 1 個/i)).toBeInTheDocument();
+  });
+
+  const copyBtn = screen.getByText(/複製名稱/i);
+  fireEvent.click(copyBtn);
+  
+  await waitFor(() => {
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test.txt');
+    expect(window.alert).toHaveBeenCalledWith('已複製檔案名稱');
+  });
+  jest.useRealTimers();
+});
+
+test('handles version mismatch error', async () => {
+  jest.spyOn(global, 'fetch').mockImplementation((url) => {
+    if (url.toString().includes('/explorer/api/version')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ gitSha: 'mismatch-sha' }),
+      });
+    }
+    return setupMocks('a32a96f2')(url);
+  });
+
+  render(<App />);
+  expect(await screen.findByText(/版本不一致/i)).toBeInTheDocument();
+});
