@@ -12,7 +12,30 @@ app.use(express.json());
 // Request logger middleware
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] ${req.method} ${req.url} - Body: ${JSON.stringify(req.body)}`);
+  const start = Date.now();
+  
+  // Hook res.send to log response summary
+  const oldSend = res.send;
+  res.send = function (data) {
+    const duration = Date.now() - start;
+    let summary = '';
+    
+    try {
+      const body = JSON.parse(typeof data === 'string' ? data : data.toString());
+      if (Array.isArray(body)) {
+        summary = `Count: ${body.length}`;
+      } else if (body && typeof body === 'object') {
+        summary = body.error ? `Error: ${body.error}` : 'Object';
+      }
+    } catch (e) {
+      summary = data ? `Size: ${data.length || 'unknown'}` : 'Empty';
+    }
+
+    console.log(`[${timestamp}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
+    return oldSend.apply(res, arguments);
+  };
+
+  console.log(`[${timestamp}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
   next();
 });
 
