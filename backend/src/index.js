@@ -14,7 +14,6 @@ app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const start = Date.now();
   const pid = process.pid;
-  const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
   
   // Hook res.send to log response summary
   const oldSend = res.send;
@@ -24,7 +23,9 @@ app.use((req, res, next) => {
     
     try {
       const body = JSON.parse(typeof data === 'string' ? data : data.toString());
-      if (Array.isArray(body)) {
+      if (req.url === '/file-explorer/api/version') {
+        summary = JSON.stringify(body);
+      } else if (Array.isArray(body)) {
         summary = `Count: ${body.length}`;
       } else if (body && typeof body === 'object') {
         summary = body.error ? `Error: ${body.error}` : 'Object';
@@ -33,11 +34,11 @@ app.use((req, res, next) => {
       summary = data ? `Size: ${data.length || 'unknown'}` : 'Empty';
     }
 
-    console.log(`[${timestamp}][PID:${pid}][SHA:${gitSha}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
+    console.log(`[${timestamp}][PID:${pid}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
     return oldSend.apply(res, arguments);
   };
 
-  console.log(`[${timestamp}][PID:${pid}][SHA:${gitSha}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
+  console.log(`[${timestamp}][PID:${pid}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
   next();
 });
 
