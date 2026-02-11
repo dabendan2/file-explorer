@@ -9,6 +9,13 @@ dotenv.config(); // 預設讀取當前工作目錄下的 .env
 const app = express();
 app.use(express.json());
 
+// Request logger middleware
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${req.method} ${req.url} - Body: ${JSON.stringify(req.body)}`);
+  next();
+});
+
 const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
 
 // 中間件：路徑安全檢查與完整路徑解析
