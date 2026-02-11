@@ -5,7 +5,8 @@ bash deploy/precheck.sh
 [ -f .env ] && export $(grep -v '^#' .env | xargs)
 
 # 2. 確保工作區乾淨，避免部署未受版本控制的變更
-if [ -n "$(git status --porcelain)" ]; then
+# 排除 frontend/build 目錄，因為它是建置產物不應受 Git 管理
+if [ -n "$(git status --porcelain | grep -v 'frontend/build/')" ]; then
     echo "❌ 錯誤：工作區尚有未提交的改動，請先 commit 再部署。"
     exit 1
 fi
