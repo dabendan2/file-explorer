@@ -13,7 +13,10 @@ app.use(express.json());
 app.use((req, res, next) => {
   const start = Date.now();
   const pid = process.pid;
+  const time = new Date().toTimeString().split(' ')[0]; // HH:MM:SS
   
+  console.log(`[${time}][PID:${pid}] ${req.method} ${req.url} ...`);
+
   const oldSend = res.send;
   res.send = function (data) {
     const duration = Date.now() - start;
@@ -32,7 +35,7 @@ app.use((req, res, next) => {
       summary = data ? `[Size: ${data.length || 'unknown'}]` : '';
     }
 
-    console.log(`[PID:${pid}] ${req.method} ${req.url} ${res.statusCode} (${duration}ms) ${summary}`);
+    console.log(`[${time}][PID:${pid}] ${req.method} ${req.url} ${res.statusCode} (${duration}ms) ${summary}`);
     return oldSend.apply(res, arguments);
   };
   next();
