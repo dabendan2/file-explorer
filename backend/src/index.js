@@ -11,11 +11,9 @@ app.use(express.json());
 
 // Request logger middleware
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
   const start = Date.now();
   const pid = process.pid;
   
-  // Hook res.send to log response summary
   const oldSend = res.send;
   res.send = function (data) {
     const duration = Date.now() - start;
@@ -26,19 +24,17 @@ app.use((req, res, next) => {
       if (req.url === '/file-explorer/api/version') {
         summary = JSON.stringify(body);
       } else if (Array.isArray(body)) {
-        summary = `Count: ${body.length}`;
-      } else if (body && typeof body === 'object') {
-        summary = body.error ? `Error: ${body.error}` : 'Object';
+        summary = `[Count: ${body.length}]`;
+      } else if (body && body.error) {
+        summary = `[Error: ${body.error}]`;
       }
     } catch (e) {
-      summary = data ? `Size: ${data.length || 'unknown'}` : 'Empty';
+      summary = data ? `[Size: ${data.length || 'unknown'}]` : '';
     }
 
-    console.log(`[${timestamp}][PID:${pid}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
+    console.log(`[PID:${pid}] ${req.method} ${req.url} ${res.statusCode} (${duration}ms) ${summary}`);
     return oldSend.apply(res, arguments);
   };
-
-  console.log(`[${timestamp}][PID:${pid}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
   next();
 });
 
