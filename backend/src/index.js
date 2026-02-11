@@ -13,6 +13,8 @@ app.use(express.json());
 app.use((req, res, next) => {
   const timestamp = new Date().toISOString();
   const start = Date.now();
+  const pid = process.pid;
+  const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
   
   // Hook res.send to log response summary
   const oldSend = res.send;
@@ -31,11 +33,11 @@ app.use((req, res, next) => {
       summary = data ? `Size: ${data.length || 'unknown'}` : 'Empty';
     }
 
-    console.log(`[${timestamp}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
+    console.log(`[${timestamp}][PID:${pid}][SHA:${gitSha}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms) - Res: ${summary}`);
     return oldSend.apply(res, arguments);
   };
 
-  console.log(`[${timestamp}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
+  console.log(`[${timestamp}][PID:${pid}][SHA:${gitSha}] ${req.method} ${req.url} - Req: ${JSON.stringify(req.body)}`);
   next();
 });
 
