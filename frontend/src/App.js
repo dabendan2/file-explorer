@@ -341,41 +341,34 @@ const App = () => {
     <div className="min-h-screen bg-[#FDFCFB] text-[#3C4043] font-sans antialiased">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b border-orange-100 shadow-sm">
-        {/* Title Line */}
-        <div className="flex items-center justify-between px-3 h-12">
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleTitleClick}
-              className={`${viewMode === 'google' ? 'text-red-600' : 'text-[#1a73e8]'} hover:bg-blue-50 px-2 py-1 rounded-xl transition-all active:scale-95 whitespace-nowrap`}
-            >
-              <span className="text-3xl font-black tracking-tight drop-shadow-sm">File Explorer</span>
-            </button>
-            <span className="text-[10px] text-gray-400 font-mono select-none self-end mb-2">
-              {gitSha}
-            </span>
-          </div>
-        </div>
-        
         {/* Path Bar */}
-        <div className="flex items-center px-3 h-9 bg-orange-50/30 overflow-x-auto no-scrollbar scroll-smooth border-t border-orange-50/50">
+        <div className="flex items-center px-3 h-12 bg-white overflow-x-auto no-scrollbar scroll-smooth">
           <div className="flex items-center min-w-max">
             <button 
-              onClick={() => fetchFiles('')}
-              className="text-orange-400 hover:text-orange-600 text-lg font-medium px-2 py-0.5 rounded-lg transition-colors"
+              onClick={() => {
+                fetchFiles('');
+                handleTitleClick();
+              }}
+              className="text-orange-400 hover:text-orange-600 text-xl font-bold px-2 py-0.5 rounded-lg transition-colors"
             >
               Home
             </button>
             {pathSegments.map((segment, i) => (
               <React.Fragment key={i}>
-                <ChevronRight size={20} className="text-orange-200 shrink-0 mx-0.5" />
+                <ChevronRight size={22} className="text-orange-200 shrink-0 mx-0.5" />
                 <button
                   onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
-                  className="text-orange-500 hover:text-orange-700 text-lg font-bold px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap"
+                  className="text-orange-500 hover:text-orange-700 text-xl font-black px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap"
                 >
                   {segment}
                 </button>
               </React.Fragment>
             ))}
+          </div>
+          <div className="ml-auto pl-4">
+            <span className="text-[10px] text-gray-300 font-mono select-none">
+              {gitSha.slice(0, 7)}
+            </span>
           </div>
         </div>
       </header>
