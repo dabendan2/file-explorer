@@ -349,25 +349,28 @@ const App = () => {
                 fetchFiles('');
                 handleTitleClick();
               }}
-              className="text-orange-400 hover:text-orange-600 text-xl font-bold px-2 py-0.5 rounded-lg transition-colors"
+              className={`text-orange-500 text-xl px-2 py-0.5 rounded-lg transition-colors ${viewMode === 'list' && pathSegments.length === 0 ? 'font-black' : 'font-medium'}`}
             >
               Home
             </button>
-            {pathSegments.map((segment, i) => (
-              <React.Fragment key={i}>
-                <ChevronRight size={22} className="text-orange-200 shrink-0 mx-0.5" />
-                <button
-                  onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
-                  className="text-orange-500 hover:text-orange-700 text-xl font-black px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap"
-                >
-                  {segment}
-                </button>
-              </React.Fragment>
-            ))}
+            {pathSegments.map((segment, i) => {
+              const isLast = i === pathSegments.length - 1 && viewMode === 'list';
+              return (
+                <React.Fragment key={i}>
+                  <ChevronRight size={22} className="text-orange-200 shrink-0 mx-0.5" />
+                  <button
+                    onClick={() => fetchFiles(pathSegments.slice(0, i + 1).join('/'))}
+                    className={`text-orange-500 text-xl px-2 py-0.5 rounded-lg transition-colors whitespace-nowrap ${isLast ? 'font-black' : 'font-medium'}`}
+                  >
+                    {segment}
+                  </button>
+                </React.Fragment>
+              );
+            })}
             {viewMode === 'viewer' && selectedFile && (
               <>
                 <ChevronRight size={22} className="text-orange-200 shrink-0 mx-0.5" />
-                <span className="text-gray-400 text-xl font-medium px-2 py-0.5 truncate max-w-[200px]">
+                <span className="text-orange-500 text-xl font-black px-2 py-0.5 truncate max-w-[200px]">
                   {selectedFile.name}
                 </span>
               </>
@@ -438,13 +441,13 @@ const App = () => {
                   className={`flex items-center px-3 py-1 hover:bg-orange-50/30 active:bg-orange-100/50 transition-colors cursor-pointer group relative`}
                 >
                   <div 
-                    className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}
+                    className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? (file.hasGit ? 'bg-green-50' : 'bg-amber-50') : 'bg-blue-50'}`}
                     onTouchStart={(e) => handleTouchStart(file, e)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
                     {file.type === 'folder' ? (
-                      <Folder size={20} className="text-amber-500 fill-amber-200" />
+                      <Folder size={20} className={`${file.hasGit ? 'text-green-500 fill-green-200' : 'text-amber-500 fill-amber-200'}`} />
                     ) : (
                       /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name) ? 
                         <ImageIcon size={20} className="text-blue-500" /> : 

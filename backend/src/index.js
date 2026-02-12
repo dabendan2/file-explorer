@@ -62,12 +62,23 @@ app.get('/file-explorer/api/files', resolveSafePath, (req, res) => {
     if (!fs.existsSync(req.fullPath)) return res.status(404).json({ error: 'Path not found' });
 
     const files = fs.readdirSync(req.fullPath).map(name => {
-      const stats = fs.statSync(path.join(req.fullPath, name));
+      const itemPath = path.join(req.fullPath, name);
+      const stats = fs.statSync(itemPath);
+      const isDirectory = stats.isDirectory();
+      
+      let hasGit = false;
+      if (isDirectory) {
+        try {
+          hasGit = fs.existsSync(path.join(itemPath, '.git'));
+        } catch (e) {}
+      }
+
       return {
         name,
-        type: stats.isDirectory() ? 'folder' : 'file',
+        type: isDirectory ? 'folder' : 'file',
         size: stats.size,
-        modified: stats.mtime.toISOString().split('T')[0]
+        modified: stats.mtime.toISOString().split('T')[0],
+        hasGit
       };
     });
     res.json(files);
