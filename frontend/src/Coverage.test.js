@@ -85,8 +85,8 @@ test('renders video and image viewers', async () => {
     expect(videoEl).toBeInTheDocument();
   });
 
-  // Back (the ArrowLeft button)
-  const backBtn = screen.getByRole('button', { name: '' });
+  // Back (Click Home or a breadcrumb)
+  const backBtn = screen.getByRole('button', { name: /Home/i });
   fireEvent.click(backBtn);
 
   // Click image

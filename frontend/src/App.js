@@ -364,6 +364,14 @@ const App = () => {
                 </button>
               </React.Fragment>
             ))}
+            {viewMode === 'viewer' && selectedFile && (
+              <>
+                <ChevronRight size={22} className="text-orange-200 shrink-0 mx-0.5" />
+                <span className="text-gray-400 text-xl font-medium px-2 py-0.5 truncate max-w-[200px]">
+                  {selectedFile.name}
+                </span>
+              </>
+            )}
           </div>
           <div className="ml-auto pl-4">
             <span className="text-[10px] text-gray-300 font-mono select-none">
@@ -387,12 +395,6 @@ const App = () => {
         )}
         {viewMode === 'viewer' ? (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex items-center px-3 py-2 border-b border-orange-100 bg-orange-50/20">
-              <button onClick={() => window.history.back()} className="p-2 hover:bg-orange-100 text-orange-600 rounded-full transition-colors mr-2">
-                <ArrowLeft size={24} />
-              </button>
-              <h2 className="text-xl font-bold truncate text-gray-700">{selectedFile?.name}</h2>
-            </div>
             <div className="p-3" onClick={handleViewerClick}>
               {selectedFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(selectedFile.name) ? (
                 <div className="bg-white p-2 rounded-2xl shadow-inner border border-orange-50">
