@@ -48,11 +48,17 @@ test('starred files appear before non-starred files', async () => {
     render(<App />);
     
     await screen.findByText('folder1');
+    
+    // Toggle star on starred.txt
+    const starredItem = await screen.findByText('starred.txt');
+    fireEvent.contextMenu(starredItem.closest('.group'));
+    fireEvent.click(screen.getByText(/加星號/i));
+
     const items = screen.getAllByText(/(\.txt|folder1)/)
         .filter(el => el.tagName === 'SPAN')
         .map(el => el.textContent);
     
-    // 由於 mockFiles 中 starred.txt 在最後，若有正確排序，它應該在第一位
+    // 現在 starred.txt 應該在第一位
     expect(items[0]).toBe('starred.txt');
     expect(items[1]).toBe('folder1');
     expect(items[2]).toBe('test.txt');
@@ -73,8 +79,8 @@ test('context menu shows Star/Unstar, Delete, Rename', async () => {
     expect(screen.getByText(/刪除物件/i)).toBeInTheDocument();
 });
 
-test('clicking Star calls api and refreshes list', async () => {
-    const fetchMock = setupMocks();
+test('clicking Star updates local storage and refreshes list', async () => {
+    setupMocks();
     render(<App />);
     
     const fileItem = await screen.findByText('test.txt');
@@ -83,10 +89,10 @@ test('clicking Star calls api and refreshes list', async () => {
     const starBtn = screen.getByText(/加星號/i);
     fireEvent.click(starBtn);
     
-    await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/file-explorer/api/star'), expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({ path: 'test.txt', starred: true })
-        }));
-    });
+    // Check if star icon appears
+    expect(await screen.findByTestId('star-icon-test.txt')).toBeInTheDocument();
+    
+    // Check local storage
+    const saved = JSON.parse(localStorage.getItem('file-explorer-stars'));
+    expect(saved['test.txt']).toBe(true);
 });

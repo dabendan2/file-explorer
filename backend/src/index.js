@@ -61,54 +61,16 @@ app.get('/file-explorer/api/files', resolveSafePath, (req, res) => {
   try {
     if (!fs.existsSync(req.fullPath)) return res.status(404).json({ error: 'Path not found' });
 
-    // 讀取星標資料
-    const starFile = path.join(EXPLORER_DATA_ROOT, '.stars.json');
-    let stars = {};
-    if (fs.existsSync(starFile)) {
-      try {
-        stars = JSON.parse(fs.readFileSync(starFile, 'utf8'));
-      } catch (e) {
-        console.error('Error reading stars file:', e);
-      }
-    }
-
     const files = fs.readdirSync(req.fullPath).map(name => {
       const stats = fs.statSync(path.join(req.fullPath, name));
-      const subPath = req.query.path ? `${req.query.path}/${name}` : name;
       return {
         name,
         type: stats.isDirectory() ? 'folder' : 'file',
         size: stats.size,
-        modified: stats.mtime.toISOString().split('T')[0],
-        starred: !!stars[subPath]
+        modified: stats.mtime.toISOString().split('T')[0]
       };
     });
     res.json(files);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// API: 設定星標
-app.post('/file-explorer/api/star', (req, res) => {
-  try {
-    const { path: subPath, starred } = req.body;
-    const starFile = path.join(EXPLORER_DATA_ROOT, '.stars.json');
-    let stars = {};
-    if (fs.existsSync(starFile)) {
-      try {
-        stars = JSON.parse(fs.readFileSync(starFile, 'utf8'));
-      } catch (e) {}
-    }
-
-    if (starred) {
-      stars[subPath] = true;
-    } else {
-      delete stars[subPath];
-    }
-
-    fs.writeFileSync(starFile, JSON.stringify(stars, null, 2));
-    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

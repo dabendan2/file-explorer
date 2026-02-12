@@ -9,6 +9,32 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('path') || localStorage.getItem('file-explorer-path') || '';
   });
+  const [starredPaths, setStarredPaths] = useState(() => {
+    try {
+      const saved = localStorage.getItem('file-explorer-stars');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('file-explorer-stars', JSON.stringify(starredPaths));
+  }, [starredPaths]);
+
+  const toggleStar = (file) => {
+    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
+    setStarredPaths(prev => {
+      const next = { ...prev };
+      if (next[path]) {
+        delete next[path];
+      } else {
+        next[path] = true;
+      }
+      return next;
+    });
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fileContent, setFileContent] = useState(null);
@@ -45,23 +71,6 @@ const App = () => {
     })
     .then(() => {
       setRenamingFile(null);
-      fetchFiles(currentPath);
-    })
-    .catch(err => setError(err.message));
-  };
-
-  const toggleStar = (file) => {
-    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
-    fetch(`/file-explorer/api/star`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path, starred: !file.starred })
-    })
-    .then(res => {
-      if (!res.ok) throw new Error('操作失敗');
-      return res.json();
-    })
-    .then(() => {
       fetchFiles(currentPath);
     })
     .catch(err => setError(err.message));
@@ -108,9 +117,15 @@ const App = () => {
         return res.json();
       })
       .then(data => {
+        // Map local star state to files
+        const dataWithStars = data.map(f => {
+          const subPath = path ? `${path}/${f.name}` : f.name;
+          return { ...f, starred: !!starredPaths[subPath] };
+        });
+
         // Starred files first, then sort by type (folders first) and name
-        const sortedData = data.sort((a, b) => {
-          if (a.starred !== b.starred) return b.starred ? 1 : -1;
+        const sortedData = dataWithStars.sort((a, b) => {
+          if (a.starred !== b.starred) return a.starred ? -1 : 1;
           if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
           return a.name.localeCompare(b.name);
         });
@@ -124,6 +139,25 @@ const App = () => {
         setLoading(false);
       });
   };
+
+  // Update file list when starredPaths change to reflect new sorting
+  useEffect(() => {
+    if (files.length > 0) {
+      const updatedFiles = files.map(f => {
+        const subPath = currentPath ? `${currentPath}/${f.name}` : f.name;
+        return { ...f, starred: !!starredPaths[subPath] };
+      }).sort((a, b) => {
+        if (a.starred !== b.starred) return a.starred ? -1 : 1;
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      // Only set if actually changed to avoid loop
+      const hasChanged = JSON.stringify(updatedFiles.map(f => f.name + f.starred)) !== 
+                        JSON.stringify(files.map(f => f.name + f.starred));
+      if (hasChanged) setFiles(updatedFiles);
+    }
+  }, [starredPaths]);
 
   const fetchFileContent = (file, pathOverride = null, skipPushState = false) => {
     const path = pathOverride || (currentPath ? `${currentPath}/${file.name}` : file.name);
@@ -196,7 +230,7 @@ const App = () => {
       .catch(err => setError(err.message));
   };
 
-  const handleTouchStart = (file, e, isText = false) => {
+  const handleTouchStart = (file, e) => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     const timer = setTimeout(() => {
@@ -446,7 +480,7 @@ const App = () => {
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
                         >{file.name}</span>
-                        {file.starred && <Star size={16} className="text-amber-400 fill-amber-400 shrink-0" />}
+                        {file.starred && <Star data-testid={`star-icon-${file.name}`} size={16} className="text-amber-400 fill-amber-400 shrink-0" />}
                       </div>
                     )}
                   </div>
