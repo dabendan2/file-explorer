@@ -22,12 +22,12 @@ if [ -n "$FRONTEND_URL" ]; then
     
     # 檢查對外前端域名
     echo "驗證對外前端入口..."
-    curl -sf -o /dev/null -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/"
+    curl -sfL -o /dev/null -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/"
 
     # 檢查對外 API 路由
     if [ -n "$EXTERNAL_API_URL" ]; then
         echo "驗證對外 API 路由: $EXTERNAL_API_URL"
-        curl -sf -o /dev/null -H "Host: $(echo $EXTERNAL_API_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/api/files"
+        curl -sfL -o /dev/null -H "Host: $(echo $EXTERNAL_API_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/api/files"
     fi
 
     # 2. 驗證後端版本注入與路徑對齊
@@ -48,7 +48,7 @@ if [ -n "$FRONTEND_URL" ]; then
 
         # 機制 5: 環境隔離驗證 (比對本地與外部 SHA)
         echo "執行機制 5: 環境隔離驗證..."
-        EXTERNAL_VERSION_INFO=$(curl -sf -H "Host: $(echo $EXTERNAL_API_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/api/version" || echo '{"gitSha":"failed"}')
+        EXTERNAL_VERSION_INFO=$(curl -sfL -H "Host: $(echo $EXTERNAL_API_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/api/version" || echo '{"gitSha":"failed"}')
         EXTERNAL_SHA=$(echo "$EXTERNAL_VERSION_INFO" | jq -r '.gitSha')
         LOCAL_SHA=$(echo "$LOCAL_VERSION_INFO" | jq -r '.gitSha')
         
@@ -83,16 +83,16 @@ if [ -n "$FRONTEND_URL" ]; then
     # 7. 驗證前端靜態檔案 Git SHA (偵測前端部署問題)
     echo "驗證前端靜態檔案 Git SHA..."
     # 嘗試從 asset-manifest.json 取得 main.js 路徑
-    FE_JS_URL=$(curl -sf -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/asset-manifest.json" | jq -r '.files["main.js"]' 2>/dev/null || echo "")
+    FE_JS_URL=$(curl -sfL -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/asset-manifest.json" | jq -r '.files["main.js"]' 2>/dev/null || echo "")
     if [ -n "$FE_JS_URL" ]; then
         # 移除 URL 中的基礎路徑前綴 (例如 /file-explorer/) 以便拼接
         FE_JS_REL_PATH=$(echo "$FE_JS_URL" | sed "s|^/file-explorer/||; s|^file-explorer/||")
         # 直接從前端 URL 獲取 JS 內容並搜尋 Git SHA
-        FE_SHA=$(curl -sf -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/$FE_JS_REL_PATH" | grep -oE "[0-9a-f]{7,40}" | grep "$REACT_APP_GIT_SHA" || echo "")
+        FE_SHA=$(curl -sfL -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/$FE_JS_REL_PATH" | grep -oE "[0-9a-f]{7,40}" | grep "$REACT_APP_GIT_SHA" || echo "")
         
         if [ -z "$FE_SHA" ]; then
             # 如果沒找到預期的 SHA，抓取 JS 中看起來像 SHA 的字串來報錯
-            ACTUAL_FE_SHA=$(curl -sf -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/$FE_JS_REL_PATH" | grep -oE "[0-9a-f]{7,40}" | head -n 1)
+            ACTUAL_FE_SHA=$(curl -sfL -H "Host: $(echo $FRONTEND_URL | awk -F/ '{print $3}')" "http://localhost:80/file-explorer/$FE_JS_REL_PATH" | grep -oE "[0-9a-f]{7,40}" | head -n 1)
             echo "❌ 錯誤：前端 JS 檔案內容中的 Git SHA ($ACTUAL_FE_SHA) 與預期 ($REACT_APP_GIT_SHA) 不符！"
             echo "這表示部署雖然更新了檔案，但 Caddy 服務的路徑可能指向了錯誤的目錄。"
             exit 1
