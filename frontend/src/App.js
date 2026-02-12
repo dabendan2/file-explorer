@@ -198,6 +198,12 @@ const App = () => {
   const handleViewerClick = (e) => {
     if (!selectedFile) return;
     
+    // Only allow navigation for images and videos
+    const fileName = selectedFile.name;
+    const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName);
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(fileName);
+    if (!isImg && !isVideo) return;
+
     const { clientX, currentTarget } = e;
     const { left, width } = currentTarget.getBoundingClientRect();
     const relativeX = clientX - left;

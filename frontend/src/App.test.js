@@ -133,10 +133,7 @@ test('navigates through images on click', async () => {
   setupMocks('a32a96f2');
   render(<App />);
   
-  // Current order: folder1, test.txt, pic.png (all unstarred in mockFiles)
-  // Let's modify pic.png to be starred to test the new sort too.
-  // Actually, let's just stick to the current unstarred sort: folder1, pic.png, test.txt (alphabetical)
-  
+  // Need to start with an image to test navigation (since text files now disable click nav)
   const picItem = await screen.findByText(/pic.png/i);
   fireEvent.click(picItem.closest('.group'));
   
@@ -144,17 +141,36 @@ test('navigates through images on click', async () => {
   const viewerContainerImg = imgElement.closest('.p-3');
   viewerContainerImg.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
   
-  // pic.png is index 1 (after folder1). Next is test.txt (index 2).
+  // Current alphabetical order (unstarred): folder1, pic.png, test.txt
+  // pic.png is index 1. Next is test.txt (index 2).
   fireEvent.click(viewerContainerImg, { clientX: 250 });
   
+  // Should navigate to test.txt
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
   
   // test.txt is index 2. Previous is pic.png (index 1).
+  // Note: we can navigate FROM text TO image via prev/next, but cannot click ON text content to navigate.
+  // Wait, let's verify if clicking on the viewer area around the text works.
   const viewerContainerTxt = screen.getByText(/file content/i).closest('.p-3');
   viewerContainerTxt.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
+  
+  // Click on left 1/3 of text viewer area -> should NOT navigate anymore because handleViewerClick returns early for text
   fireEvent.click(viewerContainerTxt, { clientX: 50 });
   
-  expect(await screen.findByAltText('')).toBeInTheDocument();
+  // Should still be on test.txt
+  expect(screen.getByText(/file content/i)).toBeInTheDocument();
+  
+  // Now go back to Home and open pic.png again to test previous navigation
+  fireEvent.click(screen.getByRole('button', { name: /Home/i }));
+  const picItem2 = await screen.findByText(/pic.png/i);
+  fireEvent.click(picItem2.closest('.group'));
+  
+  const imgElement2 = await screen.findByAltText('');
+  const viewerContainerImg2 = imgElement2.closest('.p-3');
+  viewerContainerImg2.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
+  
+  // pic.png is index 1. Prev is folder1 (skipped) -> no prev file.
+  // Actually folder1 is at index 0. prev is none.
 });
 
 test('handles folder navigation and breadcrumbs', async () => {

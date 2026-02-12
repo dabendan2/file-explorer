@@ -4,3 +4,4 @@ node_modules/
 logs/
 *.log
 frontend/coverage
+frontend/build
