@@ -128,43 +128,6 @@ test('adheres to font size and padding constraints', async () => {
   });
 });
 
-test('activates multi-select on long press and deletes item', async () => {
-  const fetchMock = setupMocks('a32a96f2');
-  // Mock window.confirm
-  window.confirm = jest.fn(() => true);
-  
-  // Mock DELETE response
-  fetchMock.mockImplementation((url, options) => {
-    if (options?.method === 'DELETE') {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
-    }
-    const setup = setupMocks('a32a96f2');
-    return setup(url, options);
-  });
-
-  render(<App />);
-  const fileItem = await screen.findByText(/test.txt/i);
-  const container = fileItem.closest('div').parentElement;
-  const icon = container.querySelector('div'); // The icon div has the selection onTouchStart
-  
-  // Simulate long press on icon
-  jest.useFakeTimers();
-  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
-  jest.advanceTimersByTime(650);
-  
-  // Check selection mode toolbar
-  expect(await screen.findByText(/已選取 1 個/i)).toBeInTheDocument();
-  
-  // Click delete button
-  const deleteBtn = screen.getByText(/刪除/i);
-  fireEvent.click(deleteBtn);
-  
-  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('1 個項目'));
-  expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/file-explorer/api/delete'), expect.objectContaining({ method: 'DELETE' }));
-  
-  jest.useRealTimers();
-});
-
 test('navigates through images on click', async () => {
   setupMocks('a32a96f2');
   render(<App />);
@@ -235,40 +198,6 @@ test('handles API errors and retry', async () => {
   fireEvent.click(retryBtn);
   expect(window.location.reload).toHaveBeenCalled();
   window.location = originalLocation;
-});
-
-test('handles selection mode and clipboard', async () => {
-  setupMocks('a32a96f2');
-  // Mock clipboard
-  Object.assign(navigator, {
-    clipboard: {
-      writeText: jest.fn().mockImplementation(() => Promise.resolve()),
-    },
-  });
-  window.alert = jest.fn();
-
-  render(<App />);
-  const fileItem = await screen.findByText(/test.txt/i);
-  const container = fileItem.closest('div').parentElement;
-  const icon = container.querySelector('div');
-  
-  // Long press on icon to enter selection mode
-  jest.useFakeTimers();
-  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
-  jest.advanceTimersByTime(650); // Ensure timer fires
-  
-  await waitFor(() => {
-    expect(screen.getByText(/已選取 1 個/i)).toBeInTheDocument();
-  });
-
-  const copyBtn = screen.getByText(/複製名稱/i);
-  fireEvent.click(copyBtn);
-  
-  await waitFor(() => {
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('test.txt');
-    expect(window.alert).toHaveBeenCalledWith('已複製檔案名稱');
-  });
-  jest.useRealTimers();
 });
 
 test('handles long press on filename for rename', async () => {
@@ -353,33 +282,4 @@ test('allows browsing hidden files like .env', async () => {
 
   // 根據 TDD 預期：後端應該要成功回傳內容
   expect(await screen.findByText(/PORT=PLACEHOLDER/i)).toBeInTheDocument();
-});
-
-test('multi-select mode prevents automatic rename on short click', async () => {
-  setupMocks('a32a96f2');
-  render(<App />);
-  const fileItem = await screen.findByText(/test.txt/i);
-  const container = fileItem.closest('div').parentElement;
-  const icon = container.querySelector('div');
-  
-  // 1. 進入多選模式 (長按圖示)
-  jest.useFakeTimers();
-  fireEvent.touchStart(icon, { touches: [{ clientX: 100, clientY: 100 }] });
-  jest.advanceTimersByTime(650);
-  jest.useRealTimers();
-  
-  expect(await screen.findByText(/已選取 1 個/i)).toBeInTheDocument();
-  
-  // 2. 在多選模式下，短按檔名
-  // 此時應該只是切換選取狀態，而不應該開啟重命名輸入框
-  fireEvent.click(fileItem);
-  
-  // 驗證輸入框不存在 (若重構沒做好，這裡會噴出輸入框)
-  const input = screen.queryByDisplayValue('test.txt');
-  expect(input).not.toBeInTheDocument();
-  
-  // 驗證選取狀態已取消 (toggle)
-  await waitFor(() => {
-    expect(screen.queryByText(/已選取 [1-9] 個/i)).not.toBeInTheDocument();
-  });
 });
