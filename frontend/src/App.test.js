@@ -132,30 +132,28 @@ test('navigates through images on click', async () => {
   setupMocks('a32a96f2');
   render(<App />);
   
-  // Open test.txt (index 1)
-  const fileItem = await screen.findByText(/test.txt/i);
-  const container = fileItem.closest('div').parentElement;
-  fireEvent.click(container);
+  // Current order: folder1, test.txt, pic.png (all unstarred in mockFiles)
+  // Let's modify pic.png to be starred to test the new sort too.
+  // Actually, let's just stick to the current unstarred sort: folder1, pic.png, test.txt (alphabetical)
   
-  // On test.txt. Get container.
-  const textElement = await screen.findByText(/file content/i);
-  const viewerContainer = textElement.closest('.p-3');
+  const picItem = await screen.findByText(/pic.png/i);
+  fireEvent.click(picItem.closest('.group'));
   
-  if (!viewerContainer) return; // Add safety check
+  const imgElement = await screen.findByAltText('');
+  const viewerContainerImg = imgElement.closest('.p-3');
+  viewerContainerImg.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
   
-  // Mock getBoundingClientRect
-  viewerContainer.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
-
-  // Now selectedFile is test.txt (index 1)
-  // Click right 1/3 (next) -> should go to pic.png (index 2)
-  fireEvent.click(viewerContainer, { clientX: 250 });
+  // pic.png is index 1 (after folder1). Next is test.txt (index 2).
+  fireEvent.click(viewerContainerImg, { clientX: 250 });
   
-  // Check if image is rendered
-  expect(await screen.findByAltText('')).toBeInTheDocument();
-  
-  // selectedFile is now pic.png. Click left 1/3 -> should go back to test.txt
-  fireEvent.click(viewerContainer, { clientX: 50 });
   expect(await screen.findByText(/file content/i)).toBeInTheDocument();
+  
+  // test.txt is index 2. Previous is pic.png (index 1).
+  const viewerContainerTxt = screen.getByText(/file content/i).closest('.p-3');
+  viewerContainerTxt.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 300 }));
+  fireEvent.click(viewerContainerTxt, { clientX: 50 });
+  
+  expect(await screen.findByAltText('')).toBeInTheDocument();
 });
 
 test('handles folder navigation and breadcrumbs', async () => {
@@ -165,7 +163,7 @@ test('handles folder navigation and breadcrumbs', async () => {
   // Use getAllByText and pick the one in the list (span)
   const folders = await screen.findAllByText(/folder1/i);
   const folderListItem = folders.find(el => el.tagName === 'SPAN');
-  const container = folderListItem.closest('div').parentElement;
+  const container = folderListItem.closest('.group');
   fireEvent.click(container);
   
   await waitFor(() => {
@@ -200,18 +198,17 @@ test('handles API errors and retry', async () => {
   window.location = originalLocation;
 });
 
-test('handles long press on filename for rename', async () => {
+test('handles context menu rename', async () => {
   const fetchMock = setupMocks('a32a96f2');
   render(<App />);
   const filename = await screen.findByText('test.txt');
   
-  // Long press on text
-  jest.useFakeTimers();
-  fireEvent.touchStart(filename, { touches: [{ clientX: 100, clientY: 100 }] });
-  jest.advanceTimersByTime(1000);
+  // Trigger context menu
+  fireEvent.contextMenu(filename.closest('.group'));
   
-  // Use real timers for waitFor to work if needed, though here we just need to wait for state update
-  jest.useRealTimers();
+  // Click rename
+  const renameBtn = screen.getByText(/重新命名/i);
+  fireEvent.click(renameBtn);
   
   // Should show input
   const input = await screen.findByDisplayValue('test.txt');
@@ -229,7 +226,6 @@ test('handles long press on filename for rename', async () => {
       body: JSON.stringify({ oldPath: 'test.txt', newPath: 'newname.txt' })
     }));
   });
-  jest.useRealTimers();
 });
 
 test('handles version mismatch error', async () => {

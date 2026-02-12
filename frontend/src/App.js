@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, File, ChevronRight, Image as ImageIcon, ArrowLeft, Video } from 'lucide-react';
+import { Folder, File, ChevronRight, Image as ImageIcon, ArrowLeft, Video, Star } from 'lucide-react';
 
 const App = () => {
   const gitSha = process.env.REACT_APP_GIT_SHA || 'unknown';
@@ -50,6 +50,23 @@ const App = () => {
     .catch(err => setError(err.message));
   };
 
+  const toggleStar = (file) => {
+    const path = currentPath ? `${currentPath}/${file.name}` : file.name;
+    fetch(`/file-explorer/api/star`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, starred: !file.starred })
+    })
+    .then(res => {
+      if (!res.ok) throw new Error('操作失敗');
+      return res.json();
+    })
+    .then(() => {
+      fetchFiles(currentPath);
+    })
+    .catch(err => setError(err.message));
+  };
+
   const formatSize = (bytes) => {
     if (!bytes || bytes === '-') return '';
     const k = 1024;
@@ -91,7 +108,13 @@ const App = () => {
         return res.json();
       })
       .then(data => {
-        setFiles(data);
+        // Starred files first, then sort by type (folders first) and name
+        const sortedData = data.sort((a, b) => {
+          if (a.starred !== b.starred) return b.starred ? 1 : -1;
+          if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+          return a.name.localeCompare(b.name);
+        });
+        setFiles(sortedData);
         setCurrentPath(path);
         localStorage.setItem('file-explorer-path', path);
         setLoading(false);
@@ -177,12 +200,7 @@ const App = () => {
     const touch = e.touches[0];
     setTouchStartPos({ x: touch.clientX, y: touch.clientY });
     const timer = setTimeout(() => {
-      if (isText) {
-        setRenamingFile(file);
-        setNewName(file.name);
-      } else {
-        setContextMenu({ file });
-      }
+      setContextMenu({ file });
     }, 600);
     setLongPressTimer(timer);
   };
@@ -392,7 +410,7 @@ const App = () => {
                 >
                   <div 
                     className={`w-9 h-9 flex items-center justify-center mr-3 rounded-xl ${file.type === 'folder' ? 'bg-amber-50' : 'bg-blue-50'}`}
-                    onTouchStart={(e) => handleTouchStart(file, e, false)}
+                    onTouchStart={(e) => handleTouchStart(file, e)}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
@@ -418,15 +436,18 @@ const App = () => {
                         className="w-full bg-white border-2 border-blue-400 rounded px-1 text-lg font-semibold"
                       />
                     ) : (
-                      <span 
-                        className="text-lg text-gray-800 font-semibold truncate block leading-tight"
-                        onTouchStart={(e) => {
-                          e.stopPropagation();
-                          handleTouchStart(file, e, true);
-                        }}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                      >{file.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="text-lg text-gray-800 font-semibold truncate block leading-tight"
+                          onTouchStart={(e) => {
+                            e.stopPropagation();
+                            handleTouchStart(file, e);
+                          }}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                        >{file.name}</span>
+                        {file.starred && <Star size={16} className="text-amber-400 fill-amber-400 shrink-0" />}
+                      </div>
                     )}
                   </div>
                   {file.type === 'file' && (
@@ -454,6 +475,25 @@ const App = () => {
             <div className="px-4 py-2 border-b border-orange-50 mb-1">
               <p className="text-sm font-bold text-gray-400 truncate">{contextMenu.file.name}</p>
             </div>
+            <button
+              onClick={() => {
+                setRenamingFile(contextMenu.file);
+                setNewName(contextMenu.file.name);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors font-bold text-lg"
+            >
+              <span className="text-2xl">✏️</span> 重新命名
+            </button>
+            <button
+              onClick={() => {
+                toggleStar(contextMenu.file);
+                setContextMenu(null);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-amber-500 hover:bg-amber-50 rounded-xl transition-colors font-bold text-lg"
+            >
+              <span className="text-2xl">{contextMenu.file.starred ? '⭐' : '☆'}</span> {contextMenu.file.starred ? '移除星號' : '加星號'}
+            </button>
             <button
               onClick={() => {
                 deleteItem(contextMenu.file);
