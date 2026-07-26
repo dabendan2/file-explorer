@@ -10,7 +10,7 @@ async function runContentTest() {
   const mockRoot = path.join(__dirname, './mock_root');
   
   // Start server on different port to avoid conflicts
-  const server = exec(`MOCK_ROOT=${mockRoot} PORT=5003 node ${backendPath}`);
+  const server = exec(`EXPLORER_DATA_ROOT=${mockRoot} PORT=5003 node ${backendPath}`);
   
   // Wait for server to start
   await new Promise(resolve => setTimeout(resolve, 2000));

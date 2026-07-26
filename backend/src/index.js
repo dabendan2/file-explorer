@@ -41,7 +41,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const EXPLORER_DATA_ROOT = process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
+const rawRoot = process.env.MOCK_ROOT || process.env.EXPLORER_DATA_ROOT || path.join(__dirname, '../../tests/sandbox/mock_root');
+const EXPLORER_DATA_ROOT = path.resolve(rawRoot);
 
 // 中間件：路徑安全檢查與完整路徑解析
 const resolveSafePath = (req, res, next) => {
