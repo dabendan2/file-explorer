@@ -18,7 +18,7 @@ mkdir -p "$EXPLORER_DEPLOY_TARGET"
 export REACT_APP_GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 echo "正在建置前端 (SHA: $REACT_APP_GIT_SHA)..."
 (cd frontend && REACT_APP_GIT_SHA="$REACT_APP_GIT_SHA" npm run build)
-sudo rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
+rsync -av --delete "frontend/build/" "$EXPLORER_DEPLOY_TARGET"
 
 # 4. 後端服務更新：使用 PM2 管理
 echo "正在更新後端服務 (PM2)..."
